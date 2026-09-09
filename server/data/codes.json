@@ -1,0 +1,23 @@
+[
+  {
+    "code": "TEST-1SONG-7A9B",
+    "maxSongs": 1,
+    "used": 0,
+    "label": "Prueba 1 Canción",
+    "createdAt": "2026-09-08T23:42:00.000Z"
+  },
+  {
+    "code": "VIP-5SONGS-K3M8",
+    "maxSongs": 5,
+    "used": 0,
+    "label": "Paquete VIP 5 Canciones",
+    "createdAt": "2026-09-08T23:42:00.000Z"
+  },
+  {
+    "code": "MASTER-UNLIMITED-PRO",
+    "maxSongs": -1,
+    "used": 0,
+    "label": "Superadmin Personal Ilimitado",
+    "createdAt": "2026-09-08T23:42:00.000Z"
+  }
+]
