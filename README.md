@@ -82,6 +82,14 @@ npm run dev
 
 ---
 
+## 📓 Bitácora de Desarrollo y Alcance
+
+Para una visión profunda de las fases de desarrollo, decisiones de ingeniería, endpoints y manual de operación:
+- Consulta el archivo en Markdown: [`BITACORA.md`](BITACORA.md)
+- O abre en tu navegador el reporte visual interactivo: [`BITACORA.html`](BITACORA.html)
+
+---
+
 ## 📄 Licencia
 
 MIT © 2026 Julián Montaña

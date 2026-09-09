@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitácora de Proyecto: SongCraft AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #080c16;
+      --bg-card: rgba(17, 24, 39, 0.75);
+      --border-card: rgba(255, 255, 255, 0.08);
+      --primary: #a855f7;
+      --primary-light: #c084fc;
+      --secondary: #ec4899;
+      --accent: #f59e0b;
+      --emerald: #10b981;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      line-height: 1.6;
+      padding-bottom: 60px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 30px 20px;
+    }
+    /* Header */
+    .hero {
+      text-align: center;
+      padding: 50px 20px 40px;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      background: rgba(168, 85, 247, 0.12);
+      border: 1px solid rgba(168, 85, 247, 0.25);
+      color: var(--primary-light);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 16px;
+    }
+    .hero h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      line-height: 1.2;
+      background: linear-gradient(135deg, #ffffff 30%, #c084fc 70%, #ec4899 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 14px;
+    }
+    .hero p {
+      color: var(--text-muted);
+      font-size: 1.05rem;
+      max-width: 650px;
+      margin: 0 auto 20px;
+    }
+    .meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 12px 20px;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--border-card);
+      border-radius: 12px;
+      width: fit-content;
+      margin: 0 auto;
+    }
+    .meta-bar strong {
+      color: #fff;
+    }
+    .meta-bar a {
+      color: var(--primary-light);
+      text-decoration: none;
+    }
+    .meta-bar a:hover {
+      text-decoration: underline;
+    }
+    /* Cards & Sections */
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      margin: 40px 0 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-card);
+      border-radius: 20px;
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+      margin-bottom: 24px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+    /* Timeline */
+    .timeline {
+      position: relative;
+      border-left: 2px solid rgba(168, 85, 247, 0.3);
+      margin-left: 15px;
+      padding-left: 25px;
+    }
+    .timeline-item {
+      position: relative;
+      margin-bottom: 30px;
+    }
+    .timeline-dot {
+      position: absolute;
+      left: -32px;
+      top: 4px;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 3px solid var(--bg-main);
+      box-shadow: 0 0 10px var(--primary);
+    }
+    .timeline-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .timeline-body {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+    .timeline-body ul {
+      margin-left: 18px;
+      margin-top: 6px;
+    }
+    .timeline-body li {
+      margin-bottom: 4px;
+    }
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 10px;
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    th {
+      background: rgba(255, 255, 255, 0.02);
+      color: #94a3b8;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    tr:hover td {
+      background: rgba(255, 255, 255, 0.015);
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .badge-purple {
+      background: rgba(168, 85, 247, 0.15);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .badge-green {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-amber {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #f472b6;
+    }
+    pre {
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #e2e8f0;
+      margin: 12px 0;
+    }
+    .cta-banner {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.15), rgba(236, 72, 153, 0.15));
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      border-radius: 20px;
+      padding: 24px;
+      text-align: center;
+      margin-top: 40px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- Hero Header -->
+    <header class="hero">
+      <div class="hero-badge">🎵 Documento de Ingeniería y Alcance</div>
+      <h1>Bitácora de Proyecto: SongCraft AI</h1>
+      <p>
+        Generador comercial de canciones personalizadas a medida utilizando Inteligencia Artificial (ElevenLabs Music API), control de códigos, transcripción por voz y auditoría centralizada.
+      </p>
+
+      <div class="meta-bar">
+        <span><strong>Autor:</strong> Julián Montaña</span>
+        <span>•</span>
+        <span><strong>Fecha:</strong> Septiembre 2026</span>
+        <span>•</span>
+        <span><strong>Repositorio:</strong> <a href="https://github.com/julianmontana1/canciones-personalizadas" target="_blank">github.com/julianmontana1/canciones-personalizadas</a></span>
+      </div>
+    </header>
+
+    <!-- Resumen y Pilares -->
+    <h2 class="section-title">📌 1. Visión y Pilares del Sistema</h2>
+    <div class="grid-3">
+      <div class="card">
+        <h3 style="color:#c084fc; font-size:16px; margin-bottom:8px;">🎧 Vista Comercial Usuario</h3>
+        <p style="font-size:13px; color:var(--text-muted);">
+          Creación rápida sin requerir API Key. Incluye 13 géneros musicales, demos de estudio reales de 10s, asistente de dictado por voz y descarga directa en MP3.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3 style="color:#fbbf24; font-size:16px; margin-bottom:8px;">🛡️ Superadmin & Auditoría</h3>
+        <p style="font-size:13px; color:var(--text-muted);">
+          Registro en tiempo real de la IP del cliente, fecha y hora exacta, ID de ElevenLabs, reproductor en línea en la tabla y almacenamiento del archivo MP3 en el servidor.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3 style="color:#34d399; font-size:16px; margin-bottom:8px;">🔑 Sistema de Códigos</h3>
+        <p style="font-size:13px; color:var(--text-muted);">
+          Control comercial por cuota (1 canción, 5 canciones o ilimitado). Historial aislado donde el usuario solo ve sus canciones creadas con su código.
+        </p>
+      </div>
+    </div>
+
+    <!-- Cronología de Desarrollo -->
+    <h2 class="section-title">⏱️ 2. Línea de Tiempo y Fases Desarrolladas</h2>
+    <div class="card">
+      <div class="timeline">
+        
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Fase 1: Creación del MVP y Arquitectura Cliente-Servidor</div>
+          <div class="timeline-body">
+            Configuración inicial con React 19, Vite y Tailwind CSS v4. Implementación del backend en Express para resolver llamadas a ElevenLabs (`POST /v1/music/compose`), capturar IP del cliente y almacenar los archivos de audio en disco local.
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Fase 2: Separación de Vistas (Usuario vs. Superadmin)</div>
+          <div class="timeline-body">
+            <ul>
+              <li><strong>Vista de Usuario:</strong> Experiencia enfocada en la creación y descarga directa, completamente limpia de historiales externos.</li>
+              <li><strong>Vista de Superadmin:</strong> Acceso protegido con clave (<code>admin123</code>), tabla con IP, fecha, hora, ID de ElevenLabs, reproductor y opción de borrado.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Fase 3: Dictado por Voz, Códigos de Acceso y Persistencia</div>
+          <div class="timeline-body">
+            <ul>
+              <li><strong>Reconocimiento de Voz:</strong> Asistente inteligente usando Web Speech API que detecta destinatario, estilo y recuerdos de forma hablada.</li>
+              <li><strong>Gestión de Códigos:</strong> Validación de saldo con 3 códigos creados (<code>TEST-1SONG-7A9B</code>, <code>VIP-5SONGS-K3M8</code> y <code>MASTER-UNLIMITED-PRO</code>).</li>
+              <li><strong>Solución a Recargas:</strong> Persistencia en <code>localStorage</code> y botón de descarga directa por Blob URL.</li>
+              <li><strong>API Key Transparente:</strong> Configuración central en la pestaña de ajustes de Superadmin.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Fase 4: Muestras de Estudio Reales y Nuevas Categorías</div>
+          <div class="timeline-body">
+            Sustitución de los sintetizadores robóticos por <strong>13 grabaciones reales de estudio en MP3</strong> con instrumentos auténticos. Incorporación de los géneros: <em>Música Infantil</em>, <em>Canción de Dormir / Nana</em>, <em>Salsa Brava</em>, <em>Mariachi</em> y <em>Banda Sinaloense</em>.
+          </div>
+        </div>
+
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-title">Fase 5: Despliegue en GitHub y Protección de Secretos</div>
+          <div class="timeline-body">
+            Publicación exitosa en GitHub con configuración rigurosa en <code>.gitignore</code> para proteger la API Key real y archivos de clientes, dejando plantillas limpias para nuevos entornos.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Catálogo de Géneros -->
+    <h2 class="section-title">🎷 3. Catálogo de 13 Géneros Musicales y Demos de Estudio</h2>
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Icono & Género</th>
+            <th>Categoría</th>
+            <th>Atmósfera e Instrumentación</th>
+            <th>Muestra MP3 (10s con Fade-Out)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>🎈 <strong>Música Infantil / Niños</strong></td>
+            <td><span class="badge badge-purple">Para Niños</span></td>
+            <td>Divertida, enérgica, juguetona para fiestas y juegos</td>
+            <td><code>public/audio/samples/infantil.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🌙 <strong>Canción de Dormir / Nana</strong></td>
+            <td><span class="badge badge-purple">Para Niños</span></td>
+            <td>Piano suave, caja de música relajante para arrullar</td>
+            <td><code>public/audio/samples/dormir.mp3</code></td>
+          </tr>
+          <tr>
+            <td>💃 <strong>Salsa Brava / Caribeña</strong></td>
+            <td><span class="badge badge-amber">Regional & Fiesta</span></td>
+            <td>Trompetas vivas, piano montuno y congas caribeñas</td>
+            <td><code>public/audio/samples/salsa.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🎺 <strong>Mariachi Tradicional</strong></td>
+            <td><span class="badge badge-amber">Regional & Fiesta</span></td>
+            <td>Trompetas mexicanas, guitarrón y sentimiento ranchero</td>
+            <td><code>public/audio/samples/mariachi.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🤠 <strong>Banda Sinaloense</strong></td>
+            <td><span class="badge badge-amber">Regional & Fiesta</span></td>
+            <td>Metales potentes, tambora, tuba y sabor norteño</td>
+            <td><code>public/audio/samples/banda.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🎉 <strong>Cumbia / Fiesta</strong></td>
+            <td><span class="badge badge-amber">Regional & Fiesta</span></td>
+            <td>Acordeón tropical y percusión festiva bailable</td>
+            <td><code>public/audio/samples/cumbia.mp3</code></td>
+          </tr>
+          <tr>
+            <td>✨ <strong>Pop Latino Moderno</strong></td>
+            <td><span class="badge badge-green">Pop & Romántico</span></td>
+            <td>Melódico, rítmico, producción actual y pegadizo</td>
+            <td><code>public/audio/samples/pop.mp3</code></td>
+          </tr>
+          <tr>
+            <td>❤️ <strong>Balada Romántica</strong></td>
+            <td><span class="badge badge-green">Pop & Romántico</span></td>
+            <td>Piano acústico y cuerdas para dedicatorias de amor</td>
+            <td><code>public/audio/samples/balada.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🪕 <strong>Acústico Íntimo</strong></td>
+            <td><span class="badge badge-green">Pop & Romántico</span></td>
+            <td>Guitarra de palo y calidez acústica cercana</td>
+            <td><code>public/audio/samples/acustico.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🔥 <strong>Reggaetón / Urbano</strong></td>
+            <td><span class="badge badge-purple">Urbano & Rock</span></td>
+            <td>Beat latino dembow con bajos envolventes</td>
+            <td><code>public/audio/samples/reggaeton.mp3</code></td>
+          </tr>
+          <tr>
+            <td>🎸 <strong>Rock / Pop Rock</strong></td>
+            <td><span class="badge badge-purple">Urbano & Rock</span></td>
+            <td>Guitarras eléctricas con fuerza y batería viva</td>
+            <td><code>public/audio/samples/rock.mp3</code></td>
+          </tr>
+          <tr>
+            <td>☕ <strong>Lo-Fi Chill Hop</strong></td>
+            <td><span class="badge badge-purple">Urbano & Rock</span></td>
+            <td>Bossa nova suave, relajante y textura vinilo</td>
+            <td><code>public/audio/samples/lofi.mp3</code></td>
+          </tr>
+          <tr>
+            <td>⚡ <strong>Electrónica / EDM</strong></td>
+            <td><span class="badge badge-purple">Urbano & Rock</span></td>
+            <td>Sintetizadores dinámicos y gran fiesta</td>
+            <td><code>public/audio/samples/electronica.mp3</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tabla de Códigos -->
+    <h2 class="section-title">🔑 4. Códigos de Acceso y Credenciales del Sistema</h2>
+    <div class="card" style="padding:0; overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Código de Acceso</th>
+            <th>Límite de Canciones</th>
+            <th>Propósito</th>
+            <th>Comportamiento al Agotarse</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="badge badge-amber">TEST-1SONG-7A9B</span></td>
+            <td><strong>1 canción</strong></td>
+            <td>Prueba unitaria</td>
+            <td>Se bloquea inmediatamente con mensaje de cuota agotada</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-purple">VIP-5SONGS-K3M8</span></td>
+            <td><strong>5 canciones</strong></td>
+            <td>Paquete cliente</td>
+            <td>Muestra contador decreciente (5, 4, 3, 2, 1, 0)</td>
+          </tr>
+          <tr>
+            <td><span class="badge badge-green">MASTER-UNLIMITED-PRO</span></td>
+            <td><strong>♾️ Ilimitado</strong></td>
+            <td>Acceso personal</td>
+            <td>Permite generaciones ilimitadas</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3 style="color:#fff; font-size:15px; margin-bottom:8px;">🛡️ Clave de Superadmin</h3>
+      <p style="font-size:13px; color:var(--text-muted);">
+        Contraseña predeterminada: <code>admin123</code>. Permite ingresar al panel de auditoría, revisar IPs, escuchar y descargar todos los MP3 generados, crear nuevos códigos y actualizar la API Key de ElevenLabs.
+      </p>
+    </div>
+
+    <!-- Endpoints de API -->
+    <h2 class="section-title">📡 5. Referencia de Endpoints Backend (Puerto 3001)</h2>
+    <div class="card">
+      <pre><code>// Públicos:
+GET  /api/health                    -> Verifica estado y hora del servidor
+GET  /api/codes/validate?code=XYZ   -> Valida código de acceso y saldo restante
+GET  /api/codes/my-songs?code=XYZ   -> Devuelve únicamente el historial del código
+POST /api/generate                  -> Genera canción con ElevenLabs y guarda MP3
+GET  /api/storage/songs/:filename   -> Streaming y descarga directa de audio MP3
+
+// Privados (Superadmin con header x-admin-key):
+POST   /api/admin/verify            -> Verifica contraseña de administrador
+GET    /api/admin/history           -> Retorna auditoría con IP, fecha, ID y canciones
+DELETE /api/admin/history/:id       -> Elimina registro y borra el archivo MP3
+GET    /api/admin/codes             -> Lista todos los códigos de acceso activos
+POST   /api/admin/codes             -> Crea nuevo código con límite personalizado
+DELETE /api/admin/codes/:code       -> Elimina un código de acceso
+GET    /api/admin/settings          -> Consulta estado de API Key (enmascarada)
+POST   /api/admin/settings          -> Actualiza API Key o contraseña de Superadmin</code></pre>
+    </div>
+
+    <!-- Manual de Inicio -->
+    <div class="cta-banner">
+      <h3 style="color:#fff; font-size:18px; margin-bottom:8px;">🚀 Cómo Iniciar la Plataforma Localmente</h3>
+      <p style="font-size:13px; color:var(--text-muted); margin-bottom:14px;">
+        Abre dos terminales en el directorio raíz del proyecto y ejecuta:
+      </p>
+      <pre style="text-align:left; max-width:550px; margin:0 auto 12px;"><code># Terminal 1: Backend Express (Puerto 3001)
+npm run server
+
+# Terminal 2: Frontend Vite + React (Puerto 5173 / 5174)
+npm run dev</code></pre>
+      <p style="font-size:12px; color:var(--primary-light);">
+        Abre tu navegador en <strong>http://localhost:5173/</strong>
+      </p>
+    </div>
+
+  </div>
+
+</body>
+</html>
