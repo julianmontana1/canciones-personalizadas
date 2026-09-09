@@ -1,0 +1,18 @@
+services:
+  songcraft:
+    build: .
+    container_name: songcraft-ai
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - ADMIN_PASSWORD=admin123
+      - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
+    volumes:
+      - ./server/data:/app/server/data
+      - ./server/storage/songs:/app/server/storage/songs
+
+volumes:
+  songcraft_data:
+  songcraft_storage:

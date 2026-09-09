@@ -446,6 +446,17 @@ app.delete('/api/admin/codes/:code', verifyAdmin, (req, res) => {
   res.json({ success: true, message: 'Código eliminado exitosamente' });
 });
 
+// Serve frontend static files if dist folder exists (production / Docker mode)
+const DIST_DIR = path.join(__dirname, '../dist');
+if (fs.existsSync(DIST_DIR)) {
+  app.use(express.static(DIST_DIR));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(DIST_DIR, 'index.html'));
+    }
+  });
+}
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Servidor de Canciones Personalizadas escuchando en http://localhost:${PORT}`);
