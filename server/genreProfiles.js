@@ -199,24 +199,47 @@ const GENRE_PROFILES = {
     backing: 'huge stacked vocal layers and chopped vocal hooks in the drop',
     production: 'festival-ready electronic production, massive stereo width, punchy and loud',
     avoid: 'acoustic folk instruments, live orchestra, lo-fi textures, slow tempo'
-  }
-};
+  },
 
-// Lightweight recipes for common genres customers type into the free-text "custom style"
-// field that are NOT one of our curated picker options (e.g. "un rap de los 90",
-// "bachata para mi esposa"). These don't need the full picker treatment, just enough
-// detail that the model doesn't default to generic pop.
-const KEYWORD_HINTS = {
+  bachata: {
+    label: 'bachata dominicana',
+    aliases: ['bachata'],
+    instruments: 'lead requinto guitar with signature bachata guitar runs, güira, bongó and a simple melodic bass',
+    tempo: 'romantic bachata tempo around 130 BPM with the classic bachata guitar syncopation',
+    vocals: 'passionate, romantic male lead voice',
+    backing: 'soft harmony vocals joining on the chorus',
+    production: 'warm, romantic Dominican bachata production',
+    avoid: 'brass sections, electronic drums, EDM synths'
+  },
+
+  carranga: {
+    label: 'carranga colombiana (Andean campesino party music)',
+    aliases: ['carranga', 'carranguera', 'carranguero', 'musica campesina'],
+    instruments: 'strummed tiple and requinto guitars carrying the melody, a guacharaca scraper driving the rhythm, and an upright acoustic bass, with no brass or electronic instruments',
+    tempo: 'lively campesino tempo around 130 BPM with a bouncy, danceable feel',
+    vocals: 'cheerful, down-to-earth male voice with a warm rural Colombian Andean accent, witty and storytelling',
+    backing: 'group male voices joining in on the chorus, festive countryside party atmosphere',
+    production: 'raw, warm acoustic string-band production, rustic and full of character',
+    avoid: 'electronic drums, synthesizers, urban or EDM production, brass horns'
+  },
+
   rap: {
     label: 'rap / hip-hop',
     aliases: ['rap', 'hip hop', 'hiphop', 'freestyle'],
     instruments: 'punchy boom-bap drum breaks, a deep sampled bassline, scratched vinyl textures and a simple looped piano or soul sample',
     tempo: 'classic hip-hop tempo around 90 BPM with a laid-back head-nodding groove',
-    vocals: 'confident, rhythmic RAPPED vocal delivery with clear diction and clever rhyme flow \u2014 spoken-flow rap, not sung melody',
+    vocals: 'confident, rhythmic RAPPED vocal delivery with clear diction and clever rhyme flow — spoken-flow rap, not sung melody',
     backing: 'occasional shouted hype-man ad-libs and a simple chanted hook',
     production: 'raw boom-bap hip-hop production with warm vinyl crackle and punchy low end',
     avoid: 'sung melodic ballad vocals, orchestral strings, EDM drops'
-  },
+  }
+};
+
+// Lightweight recipes for common genres customers type into the free-text "custom style"
+// field that are NOT one of our curated picker options (e.g. "un tango triste",
+// "algo estilo jazz"). These don't need the full picker treatment, just enough
+// detail that the model doesn't default to generic pop.
+const KEYWORD_HINTS = {
   merengue: {
     label: 'merengue dominicano',
     aliases: ['merengue'],
@@ -226,16 +249,6 @@ const KEYWORD_HINTS = {
     backing: 'group coros shouting the hook along with the lead',
     production: 'bright, festive dance-hall merengue mix',
     avoid: 'slow tempo, somber or melancholic mood'
-  },
-  bachata: {
-    label: 'bachata dominicana',
-    aliases: ['bachata'],
-    instruments: 'lead requinto guitar with signature bachata guitar runs, g\u00fcira, bong\u00f3 and a simple melodic bass',
-    tempo: 'romantic bachata tempo around 130 BPM with the classic bachata guitar syncopation',
-    vocals: 'passionate, romantic male lead voice',
-    backing: 'soft harmony vocals joining on the chorus',
-    production: 'warm, romantic Dominican bachata production',
-    avoid: 'brass sections, electronic drums, EDM synths'
   },
   tango: {
     label: 'tango argentino',

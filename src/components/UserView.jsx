@@ -12,6 +12,7 @@ import VoiceAssistantModal from './VoiceAssistantModal';
 import SongWizard from './SongWizard';
 import Sparkle, { SparkleCluster } from './Sparkle';
 import { playGenrePreview, stopAllAudioPreviews } from '../utils/genreAudioSynthesizer';
+import { MOOD_FILTERS, filterByMood } from '../utils/moodFilters';
 import { createSpeechRecognizer } from '../utils/speechRecognition';
 
 // Presentation metadata for the public showcase demos (content comes from the backend /api/demos)
@@ -39,32 +40,37 @@ const PUBLIC_DEMO_META = {
   }
 };
 
+// `mood` groups genres by the occasion the customer has in mind (used by the mood
+// filter pills), independent of their musical family.
 const GENRE_PRESETS = [
   // Niños & Dormir
-  { id: 'dormir', category: 'kids', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙', image: '/images/genero-nana.avif' },
-  { id: 'infantil', category: 'kids', name: 'Fiesta Infantil', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈', image: '/images/genero-infantil.avif' },
-  { id: 'rondas', category: 'kids', name: 'Rondas Infantiles', desc: 'Cancioncitas de juego para cantar en grupo', icon: '🎠' },
+  { id: 'dormir', mood: 'infantil', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙', image: '/images/genero-nana.avif' },
+  { id: 'infantil', mood: 'infantil', name: 'Fiesta Infantil', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈', image: '/images/genero-infantil.avif' },
+  { id: 'rondas', mood: 'infantil', name: 'Rondas Infantiles', desc: 'Cancioncitas de juego para cantar en grupo', icon: '🎠', image: '/images/genero-rondas.avif' },
 
   // Regional & Fiesta
-  { id: 'banda', category: 'latin', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠', image: '/images/genero-banda.avif' },
-  { id: 'salsa', category: 'latin', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃', image: '/images/genero-salsa.avif' },
-  { id: 'salsarosa', category: 'latin', name: 'Salsa Rosa', desc: 'Salsa romántica, suave y dedicada al amor', icon: '🌹' },
-  { id: 'mariachi', category: 'latin', name: 'Mariachi Tradicional', desc: 'Trompetas mexicanas, violines y guitarrón', icon: '🎺', image: '/images/genero-mariachi.avif' },
-  { id: 'vallenato', category: 'latin', name: 'Vallenato', desc: 'Acordeón, caja y guacharaca contando una historia', icon: '🪗' },
-  { id: 'cumbia', category: 'latin', name: 'Cumbia / Fiesta', desc: 'Sabor tropical, acordeón y ritmo bailable', icon: '🎉', image: '/images/genero-cumbia.avif' },
+  { id: 'banda', mood: 'celebracion', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠', image: '/images/genero-banda.avif' },
+  { id: 'salsa', mood: 'celebracion', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃', image: '/images/genero-salsa.avif' },
+  { id: 'salsarosa', mood: 'amor', name: 'Salsa Rosa', desc: 'Salsa romántica, suave y dedicada al amor', icon: '🌹', image: '/images/genero-salsarosa.avif' },
+  { id: 'mariachi', mood: 'amor', name: 'Mariachi Tradicional', desc: 'Trompetas mexicanas, violines y guitarrón', icon: '🎺', image: '/images/genero-mariachi.avif' },
+  { id: 'vallenato', mood: 'amor', name: 'Vallenato', desc: 'Acordeón, caja y guacharaca contando una historia', icon: '🪗', image: '/images/genero-vallenato.avif' },
+  { id: 'carranga', mood: 'celebracion', name: 'Carranga', desc: 'Guitarra campesina, guacharaca y sabor andino', icon: '🌾', image: '/images/genero-carranga.avif' },
+  { id: 'cumbia', mood: 'celebracion', name: 'Cumbia / Fiesta', desc: 'Sabor tropical, acordeón y ritmo bailable', icon: '🎉', image: '/images/genero-cumbia.avif' },
 
   // Populares & Románticos
-  { id: 'balada', category: 'pop', name: 'Balada Romántica', desc: 'Emotiva, piano acústico y cuerdas', icon: '❤️', image: '/images/genero-balada.avif' },
-  { id: 'bolero', category: 'pop', name: 'Bolero', desc: 'Guitarra requinto y voz nostálgica de trío', icon: '🎻' },
-  { id: 'pop', category: 'pop', name: 'Pop Latino Moderno', desc: 'Melódico, rítmico y pegadizo', icon: '✨', image: '/images/genero-pop.avif' },
-  { id: 'acustico', category: 'pop', name: 'Acústico Íntimo', desc: 'Guitarra acústica de palo y voz cálida', icon: '🪕', image: '/images/genero-acustico.avif' },
+  { id: 'balada', mood: 'amor', name: 'Balada Romántica', desc: 'Emotiva, piano acústico y cuerdas', icon: '❤️', image: '/images/genero-balada.avif' },
+  { id: 'bolero', mood: 'amor', name: 'Bolero', desc: 'Guitarra requinto y voz nostálgica de trío', icon: '🎻', image: '/images/genero-bolero.avif' },
+  { id: 'bachata', mood: 'amor', name: 'Bachata', desc: 'Guitarra dominicana romántica, íntima y bailable', icon: '🌺', image: '/images/genero-bachata.avif' },
+  { id: 'pop', mood: 'celebracion', name: 'Pop Latino Moderno', desc: 'Melódico, rítmico y pegadizo', icon: '✨', image: '/images/genero-pop.avif' },
+  { id: 'acustico', mood: 'amor', name: 'Acústico Íntimo', desc: 'Guitarra acústica de palo y voz cálida', icon: '🪕', image: '/images/genero-acustico.avif' },
 
   // Urbano & Energético
-  { id: 'reggaeton', category: 'urban', name: 'Reggaetón / Urbano', desc: 'Beat bailable, dembow y ritmo moderno', icon: '🔥', image: '/images/genero-urbano.avif' },
-  { id: 'reggae', category: 'urban', name: 'Reggae', desc: 'Ritmo relajado, bajo profundo y sabor caribeño', icon: '🌴' },
-  { id: 'rock', category: 'urban', name: 'Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸', image: '/images/genero-rock.avif' },
-  { id: 'lofi', category: 'urban', name: 'Lo-Fi Chill Hop', desc: 'Relajado, nostálgico, estilo vinilo', icon: '☕', image: '/images/genero-lofi.avif' },
-  { id: 'electronica', category: 'urban', name: 'Electrónica / EDM', desc: 'Sintetizadores enérgicos y fiesta total', icon: '⚡', image: '/images/genero-electronica.avif' },
+  { id: 'reggaeton', mood: 'celebracion', name: 'Reggaetón / Urbano', desc: 'Beat bailable, dembow y ritmo moderno', icon: '🔥', image: '/images/genero-urbano.avif' },
+  { id: 'reggae', mood: 'celebracion', name: 'Reggae', desc: 'Ritmo relajado, bajo profundo y sabor caribeño', icon: '🌴', image: '/images/genero-reggae.avif' },
+  { id: 'rock', mood: 'celebracion', name: 'Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸', image: '/images/genero-rock.avif' },
+  { id: 'rap', mood: 'celebracion', name: 'Rap', desc: 'Flow rapeado, beats boom-bap y rimas con actitud', icon: '🎤', image: '/images/genero-rap.avif' },
+  { id: 'lofi', mood: 'amor', name: 'Lo-Fi Chill Hop', desc: 'Relajado, nostálgico, estilo vinilo', icon: '☕', image: '/images/genero-lofi.avif' },
+  { id: 'electronica', mood: 'celebracion', name: 'Electrónica / EDM', desc: 'Sintetizadores enérgicos y fiesta total', icon: '⚡', image: '/images/genero-electronica.avif' },
 ];
 
 const DURATION_PRESETS = [
@@ -114,10 +120,17 @@ export default function UserView() {
   // 10-second preview state (real studio audio)
   const [playingPreviewGenre, setPlayingPreviewGenre] = useState(null);
 
-  // "Explora Estilos" carousel page (6 genres per slide)
+  // "Explora Estilos" carousel: mood filter + page (6 genres per slide)
+  const [stylesMood, setStylesMood] = useState('all');
   const [stylesPage, setStylesPage] = useState(0);
   const STYLES_PER_SLIDE = 6;
-  const stylesPageCount = Math.ceil(GENRE_PRESETS.length / STYLES_PER_SLIDE);
+  const filteredGenrePresets = filterByMood(GENRE_PRESETS, stylesMood);
+  const stylesPageCount = Math.max(1, Math.ceil(filteredGenrePresets.length / STYLES_PER_SLIDE));
+
+  const handleStylesMoodChange = (mood) => {
+    setStylesMood(mood);
+    setStylesPage(0);
+  };
 
   // Public showcase demos (real songs already generated)
   const [publicDemos, setPublicDemos] = useState([]);
@@ -708,10 +721,29 @@ export default function UserView() {
           </button>
         </div>
 
-        {/* Genre Carousel - 6 styles per slide, all 13 included */}
+        {/* Mood filter pills */}
+        <div className="flex flex-wrap items-center gap-2 mb-6">
+          {MOOD_FILTERS.map((filter) => (
+            <button
+              key={filter.value}
+              type="button"
+              onClick={() => handleStylesMoodChange(filter.value)}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                stylesMood === filter.value
+                  ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-transparent text-white shadow-md shadow-purple-900/40'
+                  : 'bg-gray-900/80 border-gray-800 text-gray-300 hover:text-white hover:border-gray-600'
+              }`}
+            >
+              <span>{filter.icon}</span>
+              <span>{filter.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Genre Carousel - 6 styles per slide */}
         <div className="relative">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {GENRE_PRESETS
+            {filteredGenrePresets
               .slice(stylesPage * STYLES_PER_SLIDE, stylesPage * STYLES_PER_SLIDE + STYLES_PER_SLIDE)
               .map((item) => {
                 const isPlaying = playingPreviewGenre === item.id;

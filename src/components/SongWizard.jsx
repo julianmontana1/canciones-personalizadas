@@ -5,6 +5,7 @@ import {
   Play, Square
 } from 'lucide-react';
 import Sparkle, { SparkleCluster } from './Sparkle';
+import { MOOD_FILTERS, filterByMood } from '../utils/moodFilters';
 
 export default function SongWizard({
   names,
@@ -41,11 +42,20 @@ export default function SongWizard({
   // Step 3: Historia y Recuerdos
   // Step 4: Duración, Código y Generar
   const [currentStep, setCurrentStep] = useState(1);
+  const [genreMood, setGenreMood] = useState('all');
   const genreSliderRef = useRef(null);
+  const filteredGenrePresets = filterByMood(genrePresets, genreMood);
 
   const scrollGenres = (direction) => {
     if (genreSliderRef.current) {
       genreSliderRef.current.scrollBy({ left: direction * 300, behavior: 'smooth' });
+    }
+  };
+
+  const handleGenreMoodChange = (mood) => {
+    setGenreMood(mood);
+    if (genreSliderRef.current) {
+      genreSliderRef.current.scrollTo({ left: 0, behavior: 'smooth' });
     }
   };
 
@@ -239,14 +249,33 @@ export default function SongWizard({
               </span>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-3">
               <h3 className="text-base sm:text-lg font-bold text-white">
                 ¿Qué género quieres?
               </h3>
-              <span className="text-[11px] text-gray-500 hidden sm:inline">Desliza para ver los 13 estilos →</span>
+              <span className="text-[11px] text-gray-500 hidden sm:inline">Desliza para ver los estilos →</span>
             </div>
 
-            {/* Genre Slider - all 13 styles in one swipeable row */}
+            {/* Mood filter pills */}
+            <div className="flex flex-wrap items-center gap-1.5 mb-3">
+              {MOOD_FILTERS.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => handleGenreMoodChange(filter.value)}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                    genreMood === filter.value
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 border-transparent text-white shadow-sm shadow-purple-900/40'
+                      : 'bg-gray-900/80 border-gray-700 text-gray-400 hover:text-white hover:border-gray-600'
+                  }`}
+                >
+                  <span>{filter.icon}</span>
+                  <span>{filter.label}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Genre Slider - filtered styles in one swipeable row */}
             <div className="relative">
               <button
                 type="button"
@@ -261,7 +290,10 @@ export default function SongWizard({
                 ref={genreSliderRef}
                 className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 -mx-1 px-1"
               >
-                {genrePresets.map((preset) => {
+                {filteredGenrePresets.length === 0 && (
+                  <p className="text-xs text-gray-500 py-4 px-1">No hay estilos en esta categoría todavía.</p>
+                )}
+                {filteredGenrePresets.map((preset) => {
                   const isPlaying = playingPreviewGenre === preset.id;
                   const isSelected = style === preset.name && !customStyle;
 
@@ -325,7 +357,7 @@ export default function SongWizard({
               </button>
             </div>
 
-            <p className="mt-2 text-[11px] text-gray-500 sm:hidden">Desliza para ver los 13 estilos →</p>
+            <p className="mt-2 text-[11px] text-gray-500 sm:hidden">Desliza para ver los estilos →</p>
 
             {/* Custom style free input */}
             <div className="mt-4 pt-3 border-t border-gray-800/60">
