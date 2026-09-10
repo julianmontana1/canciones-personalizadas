@@ -9,7 +9,8 @@ export default defineConfig({
     tailwindcss(),
   ],
   server: {
-    port: 5173,
+    port: 8088,
+    allowedHosts: ['canciones.montanadev.space'],
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

@@ -1,44 +1,65 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Sparkles, Music2, Clock, FileText, UserCheck, Key, 
-  CheckCircle2, AlertTriangle, Wand2, RefreshCw, Mic, Volume2, 
+import {
+  Sparkles, Music2, Clock, FileText, UserCheck, Key,
+  CheckCircle2, AlertTriangle, Wand2, RefreshCw, Mic, Volume2,
   Square, ShieldCheck, History, Download, Play, Pause, ChevronDown, ChevronUp,
-  Baby, Heart, Flame, Radio
+  Baby, Heart, Flame, Radio, Moon, Cake, Headphones, ArrowRight, Star,
+  Check, Music, Disc3, ShieldAlert, ChevronLeft, ChevronRight
 } from 'lucide-react';
+
 import SongPlayer from './SongPlayer';
 import VoiceAssistantModal from './VoiceAssistantModal';
+import SongWizard from './SongWizard';
+import Sparkle, { SparkleCluster } from './Sparkle';
 import { playGenrePreview, stopAllAudioPreviews } from '../utils/genreAudioSynthesizer';
 import { createSpeechRecognizer } from '../utils/speechRecognition';
 
+// Presentation metadata for the public showcase demos (content comes from the backend /api/demos)
+const PUBLIC_DEMO_META = {
+  'demo-a-pedida-novia': {
+    title: 'Pedida de Novia',
+    subtitle: 'Palabras al Viento',
+    icon: Heart,
+    accentClass: 'bg-rose-500/10 border-rose-500/20 text-rose-400',
+    image: '/images/demo-pedida-novia.avif'
+  },
+  'demo-b-nana-martina': {
+    title: 'Nana para Dormir',
+    subtitle: 'Nana para Martina',
+    icon: Moon,
+    accentClass: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
+    image: '/images/demo-nana-martina.avif'
+  },
+  'demo-c-cumple-papa': {
+    title: 'Cumpleaños con Banda',
+    subtitle: 'Cumpleaños de Don Roberto',
+    icon: Cake,
+    accentClass: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+    image: '/images/demo-cumpleanos-papa.avif'
+  }
+};
+
 const GENRE_PRESETS = [
   // Niños & Dormir
-  { id: 'infantil', category: 'kids', name: 'Música Infantil / Niños', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈' },
-  { id: 'dormir', category: 'kids', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙' },
+  { id: 'dormir', category: 'kids', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙', image: '/images/genero-nana.avif' },
+  { id: 'infantil', category: 'kids', name: 'Música Infantil / Niños', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈', image: '/images/genero-infantil.avif' },
 
   // Regional & Fiesta
-  { id: 'salsa', category: 'latin', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃' },
-  { id: 'mariachi', category: 'latin', name: 'Mariachi Tradicional', desc: 'Trompetas mexicanas, violines y guitarrón', icon: '🎺' },
-  { id: 'banda', category: 'latin', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠' },
-  { id: 'cumbia', category: 'latin', name: 'Cumbia / Fiesta', desc: 'Sabor tropical, acordeón y ritmo bailable', icon: '🎉' },
+  { id: 'banda', category: 'latin', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠', image: '/images/genero-banda.avif' },
+  { id: 'salsa', category: 'latin', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃', image: '/images/genero-salsa.avif' },
+  { id: 'mariachi', category: 'latin', name: 'Mariachi Tradicional', desc: 'Trompetas mexicanas, violines y guitarrón', icon: '🎺', image: '/images/genero-mariachi.avif' },
+  { id: 'cumbia', category: 'latin', name: 'Cumbia / Fiesta', desc: 'Sabor tropical, acordeón y ritmo bailable', icon: '🎉', image: '/images/genero-cumbia.avif' },
 
   // Populares & Románticos
-  { id: 'pop', category: 'pop', name: 'Pop Latino Moderno', desc: 'Melódico, rítmico y pegadizo', icon: '✨' },
-  { id: 'balada', category: 'pop', name: 'Balada Romántica', desc: 'Emotiva, piano acústico y cuerdas', icon: '❤️' },
-  { id: 'acustico', category: 'pop', name: 'Acústico Íntimo', desc: 'Guitarra acústica de palo y voz cálida', icon: '🪕' },
+  { id: 'balada', category: 'pop', name: 'Balada Romántica', desc: 'Emotiva, piano acústico y cuerdas', icon: '❤️', image: '/images/genero-balada.avif' },
+  { id: 'pop', category: 'pop', name: 'Pop Latino Moderno', desc: 'Melódico, rítmico y pegadizo', icon: '✨', image: '/images/genero-pop.avif' },
+  { id: 'acustico', category: 'pop', name: 'Acústico Íntimo', desc: 'Guitarra acústica de palo y voz cálida', icon: '🪕', image: '/images/genero-acustico.avif' },
 
   // Urbano & Energético
-  { id: 'reggaeton', category: 'urban', name: 'Reggaetón / Urbano', desc: 'Beat bailable, dembow y ritmo moderno', icon: '🔥' },
-  { id: 'rock', category: 'urban', name: 'Rock / Pop Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸' },
-  { id: 'lofi', category: 'urban', name: 'Lo-Fi Chill Hop', desc: 'Relajado, nostálgico, estilo vinilo', icon: '☕' },
-  { id: 'electronica', category: 'urban', name: 'Electrónica / EDM', desc: 'Sintetizadores enérgicos y fiesta total', icon: '⚡' },
-];
-
-const GENRE_CATEGORIES = [
-  { id: 'all', label: 'Todos (13)' },
-  { id: 'kids', label: '👶 Para Niños', badge: 'Nuevo' },
-  { id: 'latin', label: '🎺 Regional & Fiesta', badge: 'Nuevo' },
-  { id: 'pop', label: '✨ Pop & Romántico' },
-  { id: 'urban', label: '🔥 Urbano & Rock' },
+  { id: 'reggaeton', category: 'urban', name: 'Reggaetón / Urbano', desc: 'Beat bailable, dembow y ritmo moderno', icon: '🔥', image: '/images/genero-urbano.avif' },
+  { id: 'rock', category: 'urban', name: 'Rock / Pop Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸', image: '/images/genero-rock.avif' },
+  { id: 'lofi', category: 'urban', name: 'Lo-Fi Chill Hop', desc: 'Relajado, nostálgico, estilo vinilo', icon: '☕', image: '/images/genero-lofi.avif' },
+  { id: 'electronica', category: 'urban', name: 'Electrónica / EDM', desc: 'Sintetizadores enérgicos y fiesta total', icon: '⚡', image: '/images/genero-electronica.avif' },
 ];
 
 const DURATION_PRESETS = [
@@ -59,9 +80,8 @@ export default function UserView() {
   // Form parameters
   const [names, setNames] = useState('');
   const [references, setReferences] = useState('');
-  const [style, setStyle] = useState(GENRE_PRESETS[0].name);
+  const [style, setStyle] = useState('Balada Romántica');
   const [customStyle, setCustomStyle] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [duration, setDuration] = useState(60);
 
   // States
@@ -89,11 +109,31 @@ export default function UserView() {
   // 10-second preview state (real studio audio)
   const [playingPreviewGenre, setPlayingPreviewGenre] = useState(null);
 
+  // "Explora Estilos" carousel page (6 genres per slide)
+  const [stylesPage, setStylesPage] = useState(0);
+  const STYLES_PER_SLIDE = 6;
+  const stylesPageCount = Math.ceil(GENRE_PRESETS.length / STYLES_PER_SLIDE);
+
+  // Public showcase demos (real songs already generated)
+  const [publicDemos, setPublicDemos] = useState([]);
+
+  // Hero sample audio state
+  const [isPlayingHeroDemo, setIsPlayingHeroDemo] = useState(false);
+  const heroAudioRef = useRef(null);
+
   // Validate stored code on initial load
   useEffect(() => {
     if (accessCode) {
       validateCode(accessCode);
     }
+  }, []);
+
+  // Load public showcase demos
+  useEffect(() => {
+    fetch('/api/demos')
+      .then((res) => res.json())
+      .then((data) => setPublicDemos(Array.isArray(data) ? data : []))
+      .catch(() => setPublicDemos([]));
   }, []);
 
   // Fetch my songs when code is valid
@@ -107,6 +147,9 @@ export default function UserView() {
   useEffect(() => {
     return () => {
       stopAllAudioPreviews();
+      if (heroAudioRef.current) {
+        heroAudioRef.current.pause();
+      }
     };
   }, []);
 
@@ -168,7 +211,7 @@ export default function UserView() {
 
   // Toggle 10-second real instrument studio preview
   const handleToggleGenrePreview = (e, genreId) => {
-    e.stopPropagation();
+    if (e && e.stopPropagation) e.stopPropagation();
     if (playingPreviewGenre === genreId) {
       stopAllAudioPreviews();
       setPlayingPreviewGenre(null);
@@ -177,6 +220,38 @@ export default function UserView() {
       playGenrePreview(genreId, () => {
         setPlayingPreviewGenre(null);
       });
+    }
+  };
+
+  // Toggle Hero Vocal Sample Preview
+  const handleToggleHeroAudio = () => {
+    if (!heroAudioRef.current) {
+      heroAudioRef.current = new Audio('/api/demos/sample-audio'); // Or first public demo
+    }
+
+    const firstDemo = publicDemos[0];
+    const src = firstDemo ? firstDemo.audioUrl : '/audio/demo-pedida.mp3';
+    
+    if (heroAudioRef.current.src !== src) {
+      heroAudioRef.current.src = src;
+    }
+
+    if (isPlayingHeroDemo) {
+      heroAudioRef.current.pause();
+      setIsPlayingHeroDemo(false);
+    } else {
+      stopAllAudioPreviews();
+      heroAudioRef.current.play()
+        .then(() => setIsPlayingHeroDemo(true))
+        .catch(() => {
+          // If direct audio fails, fallback to synth preview
+          handleToggleGenrePreview(null, 'balada');
+          setIsPlayingHeroDemo(true);
+        });
+
+      heroAudioRef.current.onended = () => {
+        setIsPlayingHeroDemo(false);
+      };
     }
   };
 
@@ -235,8 +310,7 @@ export default function UserView() {
 
   // Form Submit
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e && e.preventDefault) e.preventDefault();
     setError('');
 
     if (!codeInfo?.valid) {
@@ -289,6 +363,9 @@ export default function UserView() {
       
       // Refresh code validation & history
       validateCode(accessCode);
+      
+      // Scroll smoothly to player
+      window.scrollTo({ top: 400, behavior: 'smooth' });
     } catch (err) {
       console.error(err);
       setError(err.message || 'Error de conexión con el servidor.');
@@ -305,21 +382,25 @@ export default function UserView() {
     setError('');
   };
 
-  // Filtered genres by category
-  const filteredPresets = selectedCategory === 'all'
-    ? GENRE_PRESETS
-    : GENRE_PRESETS.filter((p) => p.category === selectedCategory);
+  const scrollToWizard = () => {
+    const el = document.getElementById('crear-cancion');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  const loadingSteps = [
-    'Verificando código y conectando con ElevenLabs...',
-    'Estructurando letra, métrica y arreglos vocales...',
-    'Sintetizando instrumentos y melodía en alta fidelidad...',
-    'Generando masterización final en formato MP3...'
-  ];
+  const selectPlan = (code) => {
+    setAccessCode(code);
+    validateCode(code);
+    scrollToWizard();
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+    <div className="min-h-screen bg-[#070913] text-gray-100 selection:bg-pink-500 selection:text-white relative overflow-hidden">
       
+      {/* Background ambient lighting orbs with subtle float */}
+      <div className="fixed top-12 left-1/4 w-[500px] h-[500px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none -z-10 animate-float" />
+      <div className="fixed top-96 right-10 w-[450px] h-[450px] bg-pink-600/10 rounded-full blur-[130px] pointer-events-none -z-10 animate-float-delayed" />
+      <div className="fixed bottom-10 left-10 w-[400px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none -z-10" />
+
       {/* Voice Assistant Modal */}
       <VoiceAssistantModal
         isOpen={isVoiceModalOpen}
@@ -327,472 +408,711 @@ export default function UserView() {
         onApplyParsedData={handleApplyVoiceData}
       />
 
-      {/* Hero Header */}
-      <div className="text-center mb-8 sm:mb-10">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-300 text-xs font-semibold uppercase tracking-wider mb-3 shadow-sm shadow-purple-900/30">
-          <Sparkles className="w-3.5 h-3.5 text-pink-400" />
-          <span>Generador Musical Inteligente con ElevenLabs</span>
-        </div>
-        <h1 className="text-3xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          Crea tu Canción Personalizada <br />
-          <span className="bg-clip-text text-transparent bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300">
-            con Inteligencia Artificial
-          </span>
-        </h1>
-        <p className="text-sm sm:text-base text-gray-400 max-w-xl mx-auto mt-2.5">
-          Ingresa tus nombres y recuerdos (o díctalos por voz). La IA compondrá una canción única en cuestión de segundos, lista para escuchar y descargar en MP3.
-        </p>
+      {/* ============================================================ */}
+      {/* SECTION 1: HERO SECTION                                     */}
+      {/* ============================================================ */}
+      <section id="hero" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-16 lg:pt-20 lg:pb-24">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+          
+          {/* Left Column: Headline, Subtitle, CTAs & Social Proof */}
+          <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            
+            {/* Pill Badge with Sparkles */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-300 text-xs font-semibold uppercase tracking-wider shadow-lg shadow-purple-950/40">
+              <Sparkle className="w-3.5 h-3.5 text-pink-400" animation="animate-twinkle" />
+              <span>MÚSICA PERSONALIZADA CON IA Y TOQUE HUMANO</span>
+              <Sparkle className="w-2.5 h-2.5 text-purple-300" animation="animate-twinkle-delay-1" />
+            </div>
 
-        {/* Hero Visual Showcase Banner */}
-        <div className="mt-6 relative rounded-3xl overflow-hidden border border-purple-500/30 shadow-2xl shadow-purple-900/30 group">
-          <img
-            src="/hero-banner.jpg"
-            alt="SongCraft AI Studio"
-            className="w-full h-44 sm:h-56 object-cover object-center group-hover:scale-105 transition-transform duration-700"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#080c16] via-[#080c16]/50 to-transparent flex items-end p-5 sm:p-6">
-            <div className="text-left w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-xs font-semibold text-purple-300 bg-purple-950/80 px-2.5 py-0.5 rounded-full border border-purple-500/40">
-                  Estudio Virtual Activo
+            {/* H1 Main Title */}
+            <h1 className="text-4xl sm:text-6xl font-black text-white tracking-tight leading-[1.1]">
+              Convierte tu historia en una{' '}
+              <span className="relative inline-block">
+                <span className="bg-gradient-to-r from-pink-400 via-purple-300 to-indigo-300 bg-clip-text text-transparent">
+                  canción real
                 </span>
-                <p className="text-sm text-white font-medium mt-1">
-                  13 Géneros disponibles: Infantil, Nana de dormir, Salsa, Mariachi, Banda y más
-                </p>
-              </div>
+                <Sparkle className="w-4 h-4 text-pink-300 absolute -top-2 -right-4" animation="animate-twinkle" />
+              </span>
+            </h1>
 
-              {/* Quick Voice Assistant Trigger in Hero */}
+            {/* Subtitle */}
+            <p className="text-base sm:text-lg text-gray-300/90 max-w-xl mx-auto lg:mx-0 leading-relaxed font-normal">
+              Escribe tu historia o habla con nosotros y creamos una canción única de calidad profesional para regalar o dedicar.
+            </p>
+
+            {/* CTAs Buttons */}
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-2">
               <button
                 type="button"
-                onClick={() => setIsVoiceModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold text-xs shadow-lg shadow-purple-950/50 transition-all hover:scale-105 active:scale-95 flex-shrink-0"
+                onClick={scrollToWizard}
+                className="w-full sm:w-auto relative px-7 py-3.5 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-pink-500 hover:from-purple-500 hover:via-pink-500 hover:to-pink-400 text-white font-bold text-sm shadow-xl shadow-pink-900/40 hover:shadow-pink-600/50 hover:scale-105 active:scale-95 transition-all duration-300 shimmer-effect flex items-center justify-center gap-2.5"
               >
-                <Mic className="w-4 h-4 animate-pulse" />
-                <span>Dictar por Voz</span>
+                <Sparkle className="w-4 h-4 text-pink-200" animation="animate-twinkle" />
+                <span>Crear mi canción ahora</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const el = document.getElementById('ejemplos');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-gray-900/80 hover:bg-gray-800 border border-gray-700/80 text-gray-200 hover:text-white font-semibold text-sm transition-all duration-300 flex items-center justify-center gap-2 hover:border-gray-600"
+              >
+                <Play className="w-4 h-4 text-purple-400 fill-current" />
+                <span>Escuchar ejemplos</span>
               </button>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* SECTION 1: ACCESS CODE BOX */}
-      <div className="glass-panel p-5 rounded-2xl border border-gray-800 mb-8 shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 flex-shrink-0">
-              <Key className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <span>Tu Código de Acceso</span>
-                {codeInfo?.valid && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                    {codeInfo.remaining === 'unlimited' ? '♾️ Ilimitado' : `${codeInfo.remaining} canciones restantes`}
-                  </span>
-                )}
-              </h3>
-              <p className="text-xs text-gray-400 mt-0.5">
-                Ingresa tu código asignado para desbloquear la generación de canciones.
-              </p>
-            </div>
-          </div>
-
-          {/* Input & Validate Button */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <input
-              type="text"
-              value={accessCode}
-              onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-              placeholder="Ej: TEST-1SONG-7A9B"
-              className="px-3.5 py-2 bg-gray-950 border border-gray-700/80 rounded-xl text-xs sm:text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 font-mono uppercase tracking-wider flex-1 sm:w-56"
-            />
-            <button
-              type="button"
-              onClick={() => validateCode(accessCode)}
-              disabled={isValidatingCode}
-              className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-md shadow-purple-900/30 transition-all disabled:opacity-50 flex-shrink-0"
-            >
-              {isValidatingCode ? 'Validando...' : 'Aplicar'}
-            </button>
-          </div>
-        </div>
-
-        {/* Code error */}
-        {codeError && (
-          <div className="mt-3 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>{codeError}</span>
-          </div>
-        )}
-
-        {/* Demo Quick Codes Selector */}
-        <div className="mt-3 pt-3 border-t border-gray-800/80 flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-gray-400 text-[11px]">Códigos de prueba:</span>
-          {[
-            { label: '1 Canción', code: 'TEST-1SONG-7A9B' },
-            { label: '5 Canciones', code: 'VIP-5SONGS-K3M8' },
-            { label: 'Ilimitado Personal', code: 'MASTER-UNLIMITED-PRO' }
-          ].map((c) => (
-            <button
-              key={c.code}
-              type="button"
-              onClick={() => {
-                setAccessCode(c.code);
-                validateCode(c.code);
-              }}
-              className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all border ${
-                accessCode === c.code
-                  ? 'bg-purple-600/30 border-purple-500 text-purple-200'
-                  : 'bg-gray-900/80 border-gray-800 text-gray-400 hover:text-gray-200 hover:border-gray-700'
-              }`}
-            >
-              {c.label} ({c.code})
-            </button>
-          ))}
-        </div>
-
-        {/* User Code History Toggle */}
-        {codeInfo?.valid && myCodeSongs.length > 0 && (
-          <div className="mt-4 pt-3 border-t border-gray-800/80">
-            <button
-              type="button"
-              onClick={() => setShowHistory(!showHistory)}
-              className="flex items-center justify-between w-full text-xs text-purple-300 hover:text-purple-200"
-            >
-              <div className="flex items-center gap-2">
-                <History className="w-4 h-4" />
-                <span>Mis Canciones Generadas con este Código ({myCodeSongs.length})</span>
+            {/* Metrics Bar */}
+            <div className="pt-6 border-t border-gray-800/80 grid grid-cols-3 gap-4 text-center sm:text-left max-w-md mx-auto lg:mx-0">
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-white">+500</div>
+                <div className="text-xs text-gray-400 mt-0.5">canciones creadas</div>
               </div>
-              {showHistory ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-amber-400 flex items-center justify-center sm:justify-start gap-1">
+                  <span>4.9</span>
+                  <Star className="w-4 h-4 fill-amber-400" />
+                </div>
+                <div className="text-xs text-gray-400 mt-0.5">valoración media</div>
+              </div>
+              <div>
+                <div className="text-xl sm:text-2xl font-black text-teal-400">~5 min</div>
+                <div className="text-xs text-gray-400 mt-0.5">tiempo de entrega</div>
+              </div>
+            </div>
 
-            {showHistory && (
-              <div className="mt-3 space-y-2 max-h-52 overflow-y-auto pr-1">
-                {myCodeSongs.map((s) => (
-                  <div
-                    key={s.id}
-                    className="p-2.5 rounded-xl bg-gray-950/70 border border-gray-800/80 flex items-center justify-between text-xs gap-3"
-                  >
-                    <div>
-                      <div className="font-semibold text-white">{s.names}</div>
-                      <div className="text-[10px] text-gray-400">
-                        {s.style} • {s.duration}s • {new Date(s.timestamp).toLocaleDateString()}
-                      </div>
+          </div>
+
+          {/* Right Column: Hero Visual with Studio Vocalist & Floating Sample Pill */}
+          <div className="lg:col-span-5 relative">
+            <div className="relative mx-auto max-w-md rounded-3xl overflow-hidden border border-purple-500/30 shadow-2xl shadow-purple-950/60 group animate-float">
+              
+              {/* Studio Singer Image */}
+              <img
+                src="/images/hero-vocalista.avif"
+                alt="Cantante en estudio SerenatIA"
+                className="w-full h-[400px] sm:h-[460px] object-cover object-center group-hover:scale-105 transition-transform duration-700"
+              />
+
+              {/* Glowing gradient overlay */}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#090b16] via-transparent to-black/20 pointer-events-none" />
+
+              {/* Floating Audio Preview Pill */}
+              <div className="absolute bottom-5 left-4 right-4 sm:left-6 sm:right-6">
+                <div
+                  onClick={handleToggleHeroAudio}
+                  className="glass-panel-glow p-3 sm:p-3.5 rounded-2xl border border-pink-500/40 shadow-xl cursor-pointer hover:border-pink-400 transition-all flex items-center justify-between gap-3 group/pill"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-pink-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-pink-900/50 group-hover/pill:scale-105 transition-transform">
+                      {isPlayingHeroDemo ? (
+                        <Square className="w-4 h-4 fill-current animate-pulse" />
+                      ) : (
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setGeneratedSong(s);
-                          localStorage.setItem('songcraft_active_song', JSON.stringify(s));
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-purple-600/20 text-purple-300 border border-purple-500/30 hover:bg-purple-600/30"
-                      >
-                        Cargar
-                      </button>
-                      <a
-                        href={s.audioUrl}
-                        download={s.filename}
-                        className="p-1 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-emerald-400 hover:text-emerald-200"
-                        title="Descargar MP3"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
+                    <div>
+                      <div className="text-xs font-bold text-white flex items-center gap-1.5">
+                        <span>Para Camila con amor</span>
+                        <Sparkle className="w-2.5 h-2.5 text-pink-400" animation="animate-twinkle" />
+                      </div>
+                      <div className="text-[10px] text-gray-400">
+                        {isPlayingHeroDemo ? 'Reproduciendo muestra de estudio...' : '0:30 de muestra · Haz clic para oír'}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Soundwave equalizer bars */}
+                  <div className="flex items-end gap-1 h-5 px-1">
+                    <div className={`w-1 bg-pink-500 rounded-full ${isPlayingHeroDemo ? 'animate-wave-1' : 'h-1.5'}`} />
+                    <div className={`w-1 bg-purple-400 rounded-full ${isPlayingHeroDemo ? 'animate-wave-2' : 'h-3'}`} />
+                    <div className={`w-1 bg-pink-400 rounded-full ${isPlayingHeroDemo ? 'animate-wave-3' : 'h-2'}`} />
+                    <div className={`w-1 bg-indigo-400 rounded-full ${isPlayingHeroDemo ? 'animate-wave-4' : 'h-1.5'}`} />
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* SECTION 2: CÓMO FUNCIONA (4 PASOS)                          */}
+      {/* ============================================================ */}
+      <section id="como-funciona" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/60">
+        <div className="text-center mb-12">
+          <span className="text-xs font-bold uppercase tracking-widest text-purple-400">
+            CÓMO FUNCIONA
+          </span>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-1.5">
+            De tu historia a una canción, en 4 pasos
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            {
+              step: '01',
+              title: 'Elige el género',
+              desc: 'Balada, banda, nana de dormir, reggaetón, salsa y más de 13 estilos.',
+              icon: Music2,
+              color: 'text-purple-400',
+              border: 'border-purple-500/20'
+            },
+            {
+              step: '02',
+              title: 'Cuéntanos la historia',
+              desc: 'Escribe los nombres, recuerdos y anécdotas, o díctalo directamente con voz.',
+              icon: FileText,
+              color: 'text-pink-400',
+              border: 'border-pink-500/20'
+            },
+            {
+              step: '03',
+              title: 'La IA compone',
+              desc: 'Nuestros modelos afinados estructuran letra, acordes, armonías y voces de estudio.',
+              icon: Wand2,
+              color: 'text-indigo-400',
+              border: 'border-indigo-500/20'
+            },
+            {
+              step: '04',
+              title: 'Escucha y descarga',
+              desc: 'Recibe tu canción en MP3 de alta fidelidad, lista para enviar por WhatsApp o regalar.',
+              icon: Download,
+              color: 'text-emerald-400',
+              border: 'border-emerald-500/20'
+            }
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.step}
+                className={`glass-panel p-6 rounded-3xl border ${item.border} hover:border-gray-600 transition-all duration-300 flex flex-col justify-between group hover:-translate-y-1`}
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="w-10 h-10 rounded-2xl bg-gray-900 border border-gray-800 flex items-center justify-center">
+                      <Icon className={`w-5 h-5 ${item.color} group-hover:scale-110 transition-transform`} />
+                    </div>
+                    <span className="text-sm font-mono font-bold text-gray-500 group-hover:text-gray-300">
+                      {item.step}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-xs text-gray-400 leading-relaxed">{item.desc}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* SECTION 3: CREA TU CANCIÓN (EL WIZARD O REPRODUCTOR)        */}
+      {/* ============================================================ */}
+      <section id="crear-cancion" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        
+        {/* If song is already generated */}
+        {generatedSong ? (
+          <div className="space-y-6 animate-fadeIn">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+                <CheckCircle2 className="w-5 h-5" />
+                <span>¡Tu canción personalizada está lista para escuchar y descargar!</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetForNewSong}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold transition-all"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Crear otra canción</span>
+              </button>
+            </div>
+
+            <SongPlayer
+              song={generatedSong}
+              title={`Canción para ${generatedSong.names}`}
+              subtitle={`Estilo: ${generatedSong.style} • Duración: ${generatedSong.duration}s`}
+            />
+
+            <div className="p-4 rounded-2xl bg-gray-950/60 border border-gray-800 text-xs text-gray-400 text-center">
+              💾 <strong>Tu canción permanece guardada en esta pantalla:</strong> Puedes recargar o salir de la página y volver cuando quieras.
+            </div>
+          </div>
+        ) : (
+          <SongWizard
+            names={names}
+            setNames={setNames}
+            references={references}
+            setReferences={setReferences}
+            style={style}
+            setStyle={setStyle}
+            customStyle={customStyle}
+            setCustomStyle={setCustomStyle}
+            duration={duration}
+            setDuration={setDuration}
+            accessCode={accessCode}
+            setAccessCode={setAccessCode}
+            codeInfo={codeInfo}
+            codeError={codeError}
+            isValidatingCode={isValidatingCode}
+            validateCode={validateCode}
+            handleSubmit={handleSubmit}
+            isGenerating={isGenerating}
+            generationStep={generationStep}
+            error={error}
+            handleSingleFieldVoice={handleSingleFieldVoice}
+            isInlineRecordingNames={isInlineRecordingNames}
+            isInlineRecordingRefs={isInlineRecordingRefs}
+            setIsVoiceModalOpen={setIsVoiceModalOpen}
+            handleToggleGenrePreview={handleToggleGenrePreview}
+            playingPreviewGenre={playingPreviewGenre}
+            genrePresets={GENRE_PRESETS}
+            durationPresets={DURATION_PRESETS}
+          />
+        )}
+
+      </section>
+
+      {/* ============================================================ */}
+      {/* SECTION 4: EXPLORA ESTILOS                                  */}
+      {/* ============================================================ */}
+      <section id="estilos" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/60">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4">
+          <div>
+            <span className="text-xs font-bold uppercase tracking-widest text-purple-400">
+              EXPLORA ESTILOS
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-1.5">
+              Elige el estilo perfecto
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={scrollToWizard}
+            className="text-xs font-semibold text-purple-300 hover:text-pink-300 flex items-center gap-1 self-start sm:self-auto"
+          >
+            <span>Ver todos en el formulario</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Genre Carousel - 6 styles per slide, all 13 included */}
+        <div className="relative">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {GENRE_PRESETS
+              .slice(stylesPage * STYLES_PER_SLIDE, stylesPage * STYLES_PER_SLIDE + STYLES_PER_SLIDE)
+              .map((item) => {
+                const isPlaying = playingPreviewGenre === item.id;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      setStyle(item.name);
+                      scrollToWizard();
+                    }}
+                    className={`relative rounded-3xl overflow-hidden border border-gray-800/90 h-52 group cursor-pointer hover:border-purple-500/50 transition-all duration-300 shadow-xl ${
+                      item.image ? '' : 'bg-gradient-to-br from-gray-900 to-gray-950 flex flex-col items-center justify-center'
+                    }`}
+                  >
+                    {item.image ? (
+                      <>
+                        {/* Background Image with Zoom on hover */}
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                        />
+                        {/* Dark Gradient Overlay */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent p-5 flex flex-col justify-between" />
+                      </>
+                    ) : (
+                      <span className="text-5xl opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">{item.icon}</span>
+                    )}
+
+                    {/* Top Badge & 10s Demo Button */}
+                    <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                      <span className="text-lg">{item.icon}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleGenrePreview(e, item.id)}
+                        className={`flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${
+                          isPlaying
+                            ? 'bg-amber-500 text-gray-950 border-amber-400 animate-pulse'
+                            : 'bg-black/70 text-amber-300 border-amber-400/30 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        {isPlaying ? (
+                          <>
+                            <Square className="w-2.5 h-2.5 fill-current" />
+                            <span>Parar</span>
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-2.5 h-2.5 fill-current" />
+                            <span>Demo 10s</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Bottom Content */}
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-base font-bold text-white group-hover:text-pink-300 transition-colors">
+                        {item.name}
+                      </h3>
+                      <p className="text-xs text-gray-300 line-clamp-1 mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          {/* Carousel Controls */}
+          {stylesPageCount > 1 && (
+            <div className="flex items-center justify-center gap-4 mt-8">
+              <button
+                type="button"
+                onClick={() => setStylesPage((p) => (p - 1 + stylesPageCount) % stylesPageCount)}
+                className="w-10 h-10 rounded-full bg-gray-900/90 border border-gray-700 flex items-center justify-center text-gray-300 hover:text-white hover:border-purple-500/60 transition-all"
+                aria-label="Estilos anteriores"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+
+              <div className="flex items-center gap-2">
+                {Array.from({ length: stylesPageCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setStylesPage(i)}
+                    className={`h-1.5 rounded-full transition-all ${
+                      i === stylesPage ? 'w-6 bg-gradient-to-r from-purple-500 to-pink-500' : 'w-1.5 bg-gray-700 hover:bg-gray-600'
+                    }`}
+                    aria-label={`Ir a la página ${i + 1}`}
+                  />
                 ))}
               </div>
-            )}
-          </div>
-        )}
-      </div>
 
-      {/* Result View (if song generated or active) */}
-      {generatedSong && (
-        <div className="mb-10 space-y-6 animate-fadeIn">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-emerald-400 font-medium text-sm">
-              <CheckCircle2 className="w-5 h-5" />
-              <span>¡Tu canción está lista para escuchar y descargar!</span>
+              <button
+                type="button"
+                onClick={() => setStylesPage((p) => (p + 1) % stylesPageCount)}
+                className="w-10 h-10 rounded-full bg-gray-900/90 border border-gray-700 flex items-center justify-center text-gray-300 hover:text-white hover:border-purple-500/60 transition-all"
+                aria-label="Más estilos"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
+          )}
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* SECTION 5: MUESTRAS REALES                                  */}
+      {/* ============================================================ */}
+      {publicDemos.length > 0 && (
+        <section id="ejemplos" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/60">
+          <div className="text-center mb-12">
+            <span className="text-xs font-bold uppercase tracking-widest text-purple-400">
+              MUESTRAS REALES
+            </span>
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-1.5">
+              Escucha ejemplos reales
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto mt-2">
+              Canciones generadas y masterizadas con historias auténticas de nuestros usuarios.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {publicDemos.map((demo) => {
+              const meta = PUBLIC_DEMO_META[demo.demoId] || {
+                title: demo.style,
+                subtitle: demo.names,
+                icon: Music2,
+                image: '/images/hero-vocalista.avif'
+              };
+
+              return (
+                <div
+                  key={demo.demoId}
+                  className="glass-panel rounded-3xl border border-gray-800/80 overflow-hidden flex flex-col group hover:border-purple-500/40 transition-all duration-300"
+                >
+                  {/* Card Cover Photo */}
+                  <div className="relative h-44 w-full overflow-hidden">
+                    <img
+                      src={meta.image}
+                      alt={meta.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-[#0d111e] via-transparent to-transparent" />
+                    <span className="absolute top-3 right-3 text-[10px] font-semibold px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-gray-300 border border-white/10">
+                      {demo.duration} seg
+                    </span>
+                  </div>
+
+                  {/* Card Body */}
+                  <div className="p-5 flex flex-col flex-1 justify-between gap-4">
+                    <div>
+                      <div className="text-base font-bold text-white mb-0.5">{meta.title}</div>
+                      <div className="text-xs text-purple-300 font-medium">{demo.style}</div>
+                      <p className="text-xs text-gray-400 mt-2.5 line-clamp-3 leading-relaxed">
+                        "{demo.references}"
+                      </p>
+                    </div>
+
+                    {/* Audio Player Component */}
+                    <div className="pt-2">
+                      <audio controls src={demo.audioUrl} className="w-full h-9" />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ============================================================ */}
+      {/* SECTION 6: PLANES Y PRECIOS                                 */}
+      {/* ============================================================ */}
+      <section id="precios" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/60">
+        <div className="text-center mb-12">
+          <span className="text-xs font-bold uppercase tracking-widest text-purple-400">
+            PLANES Y PRECIOS
+          </span>
+          <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-1.5">
+            Elige cómo quieres sorprender
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto mt-2">
+            Tarifas únicas y transparentes. Sin suscripciones ocultas.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto items-stretch">
+          
+          {/* Plan Básico */}
+          <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-gray-800 flex flex-col justify-between hover:border-gray-700 transition-all">
+            <div>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                UNA CANCIÓN
+              </span>
+              <div className="text-3xl sm:text-4xl font-black text-white mt-2">
+                $10.000 <span className="text-xs font-normal text-gray-400">COP</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Ideal para un detalle inolvidable, cumpleaños o sorpresa.
+              </p>
+
+              <ul className="mt-6 space-y-3 text-xs text-gray-300">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>1 canción completa con letra y voz</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Descarga en MP3 de alta fidelidad</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Entrega en ~5 minutos</span>
+                </li>
+              </ul>
+            </div>
+
             <button
               type="button"
-              onClick={handleResetForNewSong}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white text-xs font-medium transition-all"
+              onClick={() => selectPlan('TEST-1SONG-7A9B')}
+              className="mt-8 w-full py-3 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-200 hover:text-white font-semibold text-xs border border-gray-700 transition-all"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
-              Crear otra canción
+              Elegir plan
             </button>
           </div>
 
-          <SongPlayer
-            song={generatedSong}
-            title={`Canción para ${generatedSong.names}`}
-            subtitle={`Estilo: ${generatedSong.style} • Duración: ${generatedSong.duration}s`}
-          />
+          {/* Plan Recomendado (MÁS POPULAR) */}
+          <div className="relative glass-panel-glow p-6 sm:p-7 rounded-3xl border-2 border-purple-500/60 shadow-2xl shadow-purple-950/70 flex flex-col justify-between scale-[1.03] z-10">
+            {/* Sparkle badge */}
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-purple-600 via-pink-600 to-pink-500 text-white text-[10px] font-black tracking-wider uppercase shadow-md flex items-center gap-1.5">
+              <Sparkle className="w-2.5 h-2.5 text-yellow-200" animation="animate-twinkle" />
+              <span>MÁS POPULAR</span>
+              <Sparkle className="w-2.5 h-2.5 text-pink-200" animation="animate-twinkle-delay-1" />
+            </div>
 
-          <div className="p-3.5 rounded-2xl bg-gray-900/40 border border-gray-800 text-xs text-gray-400 text-center">
-            💾 <strong>Tu canción permanece guardada en esta pantalla:</strong> Si recargas la página o sales de la pestaña, tu canción seguirá aquí lista para reproducir y descargar.
+            <div>
+              <span className="text-xs font-bold text-pink-400 uppercase tracking-wider">
+                PACK 3 CANCIONES
+              </span>
+              <div className="text-3xl sm:text-4xl font-black text-white mt-2">
+                $25.000 <span className="text-xs font-normal text-gray-400">COP</span>
+              </div>
+              <p className="text-xs text-gray-300 mt-2">
+                La mejor opción para probar distintos géneros o dedicar a varias personas.
+              </p>
+
+              <ul className="mt-6 space-y-3 text-xs text-gray-200">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
+                  <span><strong>3 canciones</strong> completas e independientes</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
+                  <span>Duración extendida hasta 3 minutos</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
+                  <span>Asistente por voz IA prioritario</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
+                  <span>Descarga directa MP3 para WhatsApp</span>
+                </li>
+              </ul>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => selectPlan('VIP-5SONGS-K3M8')}
+              className="mt-8 w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-pink-500 hover:from-purple-500 hover:via-pink-500 hover:to-pink-400 text-white font-bold text-xs shadow-lg shadow-pink-900/40 hover:scale-[1.02] transition-all shimmer-effect"
+            >
+              Elegir plan
+            </button>
+          </div>
+
+          {/* Plan Premium */}
+          <div className="glass-panel p-6 sm:p-7 rounded-3xl border border-gray-800 flex flex-col justify-between hover:border-gray-700 transition-all">
+            <div>
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                PACK 5 CANCIONES
+              </span>
+              <div className="text-3xl sm:text-4xl font-black text-white mt-2">
+                $40.000 <span className="text-xs font-normal text-gray-400">COP</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-2">
+                Para familias, creadores o regalos múltiples con máxima personalización.
+              </p>
+
+              <ul className="mt-6 space-y-3 text-xs text-gray-300">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span><strong>5 canciones</strong> personalizadas con IA</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Estilos musicales ilimitados</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Acceso a masterización de estudio</span>
+                </li>
+              </ul>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => selectPlan('MASTER-UNLIMITED-PRO')}
+              className="mt-8 w-full py-3 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-200 hover:text-white font-semibold text-xs border border-gray-700 transition-all"
+            >
+              Elegir plan
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* SECTION 7: BANNER FINAL CTA                                 */}
+      {/* ============================================================ */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-purple-800 via-pink-600 to-indigo-700 p-8 sm:p-12 text-white shadow-2xl shadow-pink-950/60 shimmer-effect">
+          
+          {/* Sparkles on Banner */}
+          <SparkleCluster className="top-4 left-6" />
+          <SparkleCluster className="bottom-4 right-10" />
+
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="max-w-xl text-center md:text-left">
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                ¿Listo para sorprender a alguien especial?
+              </h2>
+              <p className="text-xs sm:text-sm text-pink-100/90 mt-2">
+                Escribe su canción hoy y tenla lista en minutos para WhatsApp o regalo.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={scrollToWizard}
+              className="px-8 py-3.5 rounded-full bg-white hover:bg-gray-100 text-gray-950 font-bold text-xs sm:text-sm shadow-xl hover:scale-105 active:scale-95 transition-all flex-shrink-0"
+            >
+              Crear mi canción →
+            </button>
           </div>
         </div>
-      )}
+      </section>
 
-      {/* Main Creation Card Form */}
-      {!generatedSong && (
-        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-gray-800/80 shadow-2xl relative">
-          
-          <form onSubmit={handleSubmit} className="space-y-6">
-
-            {/* Error Message */}
-            {error && (
-              <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-rose-300 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                <span>{error}</span>
+      {/* ============================================================ */}
+      {/* SECTION 8: FOOTER                                           */}
+      {/* ============================================================ */}
+      <footer className="border-t border-gray-900 bg-[#05070d] py-12 text-gray-400 text-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
+            
+            {/* Column 1: Logo & Info */}
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Music className="w-5 h-5 text-pink-400" />
+                <span className="font-extrabold text-lg text-white">SerenatIA</span>
               </div>
-            )}
+              <p className="text-gray-400 text-xs leading-relaxed">
+                Canciones personalizadas con Inteligencia Artificial y toque humano para momentos inolvidables.
+              </p>
+            </div>
 
-            {/* Parameter: Names with inline mic dictation */}
+            {/* Column 2: Contacto */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-                  <UserCheck className="w-4 h-4 text-purple-400" />
-                  <span>¿Para quién o qué es la canción? (Nombres / Dedicatoria)</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleSingleFieldVoice('names')}
-                  className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border transition-all ${
-                    isInlineRecordingNames
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                      : 'bg-gray-800/80 text-gray-400 hover:text-purple-300 border-gray-700'
-                  }`}
-                  title="Dictar por voz este campo"
-                >
-                  <Mic className="w-3 h-3" />
-                  <span>{isInlineRecordingNames ? 'Grabando...' : 'Dictar'}</span>
-                </button>
-              </div>
-              <input
-                type="text"
-                value={names}
-                onChange={(e) => setNames(e.target.value)}
-                placeholder="Ejemplo: Para mi bebé Mateo / Para Sofía en sus 15 años / Para Don Ramón con Mariachi"
-                required
-                className="w-full px-4 py-3 bg-gray-900/90 border border-gray-800 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
-              />
+              <div className="font-semibold text-white mb-3">Contacto</div>
+              <ul className="space-y-2 text-gray-400">
+                <li>soporte@serenatia.com</li>
+                <li>WhatsApp: +57 300 000 0000</li>
+                <li>Lunes a Domingo, 24/7</li>
+              </ul>
             </div>
 
-            {/* Parameter: References with inline mic dictation */}
+            {/* Column 3: Ayuda */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-pink-400" />
-                  <span>Referencias, Anécdotas y Emociones Clave</span>
-                </label>
-                <button
-                  type="button"
-                  onClick={() => handleSingleFieldVoice('refs')}
-                  className={`flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border transition-all ${
-                    isInlineRecordingRefs
-                      ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
-                      : 'bg-gray-800/80 text-gray-400 hover:text-pink-300 border-gray-700'
-                  }`}
-                  title="Dictar por voz anécdotas y detalles"
-                >
-                  <Mic className="w-3 h-3" />
-                  <span>{isInlineRecordingRefs ? 'Grabando...' : 'Dictar historia'}</span>
-                </button>
-              </div>
-              <textarea
-                value={references}
-                onChange={(e) => setReferences(e.target.value)}
-                rows={3}
-                placeholder="Escribe detalles que deban estar en la canción: cómo es la persona, sus juguetes o travesuras, anécdotas inolvidables, lugares o momentos especiales..."
-                className="w-full px-4 py-3 bg-gray-900/90 border border-gray-800 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all resize-none"
-              />
+              <div className="font-semibold text-white mb-3">Ayuda</div>
+              <ul className="space-y-2 text-gray-400">
+                <li><a href="#como-funciona" className="hover:text-white">Cómo funciona</a></li>
+                <li><a href="#precios" className="hover:text-white">Preguntas frecuentes</a></li>
+                <li><a href="#estilos" className="hover:text-white">Guía de géneros</a></li>
+              </ul>
             </div>
 
-            {/* Parameter: Song Type / Style WITH REAL 10-SECOND DEMOS & CATEGORIES */}
+            {/* Column 4: Legal */}
             <div>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2.5">
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-                  <Music2 className="w-4 h-4 text-indigo-400" />
-                  <span>Estilo y Género Musical</span>
-                </label>
-                <span className="text-[11px] text-gray-400">
-                  🎧 Haz clic en <span className="text-amber-400 font-semibold">Demo 10s</span> para escuchar instrumentos reales
-                </span>
-              </div>
-
-              {/* Category Filter Tabs */}
-              <div className="flex flex-wrap items-center gap-1.5 mb-3">
-                {GENRE_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(cat.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 ${
-                      selectedCategory === cat.id
-                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-sm'
-                        : 'bg-gray-900/80 border border-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    <span>{cat.label}</span>
-                    {cat.badge && (
-                      <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-pink-500 text-white">
-                        {cat.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              {/* Genre Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                {filteredPresets.map((preset) => {
-                  const isPlayingThis = playingPreviewGenre === preset.id;
-                  const isSelected = style === preset.name && !customStyle;
-
-                  return (
-                    <div
-                      key={preset.id}
-                      onClick={() => {
-                        setStyle(preset.name);
-                        setCustomStyle('');
-                      }}
-                      className={`p-3 rounded-xl border text-left transition-all relative cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-purple-600/20 border-purple-500 shadow-md shadow-purple-900/30 text-white'
-                          : 'bg-gray-900/60 border-gray-800 hover:border-gray-700 text-gray-300'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xl">{preset.icon}</span>
-                          
-                          {/* 10s Real Audio Demo Button */}
-                          <button
-                            type="button"
-                            onClick={(e) => handleToggleGenrePreview(e, preset.id)}
-                            className={`flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full border transition-all ${
-                              isPlayingThis
-                                ? 'bg-amber-500 text-gray-950 border-amber-400 shadow-md shadow-amber-500/30 animate-pulse'
-                                : 'bg-gray-800/90 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
-                            }`}
-                            title="Escuchar 10s con instrumentos reales de estudio"
-                          >
-                            {isPlayingThis ? (
-                              <>
-                                <Square className="w-2.5 h-2.5 fill-current" />
-                                <span>Parar</span>
-                              </>
-                            ) : (
-                              <>
-                                <Play className="w-2.5 h-2.5 fill-current text-amber-400" />
-                                <span>Demo 10s</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
-                        <div className="font-semibold text-xs text-white line-clamp-1">{preset.name}</div>
-                        <div className="text-[10px] text-gray-400 line-clamp-1 mt-0.5">{preset.desc}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Custom style input option */}
-              <div className="mt-2.5">
-                <input
-                  type="text"
-                  value={customStyle}
-                  onChange={(e) => setCustomStyle(e.target.value)}
-                  placeholder="O escribe otro género personalizado (ej: Vallenato romántico, Flamenco moderno...)"
-                  className="w-full px-3.5 py-2 bg-gray-950/60 border border-gray-800 rounded-xl text-xs text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500"
-                />
-              </div>
+              <div className="font-semibold text-white mb-3">Legal y Administración</div>
+              <ul className="space-y-2 text-gray-400">
+                <li>Términos y condiciones</li>
+                <li>Política de privacidad</li>
+                <li>Licencia de uso musical</li>
+                <li><a href="#/admin" className="text-amber-400/80 hover:text-amber-300 transition-colors">🔐 Panel Superadmin</a></li>
+              </ul>
             </div>
 
-            {/* Parameter: Duration */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold uppercase tracking-wider text-gray-300 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-teal-400" />
-                  <span>Duración de la Canción</span>
-                </label>
-                <span className="text-xs font-bold text-teal-400 font-mono">
-                  {duration} segundos ({Math.floor(duration / 60)}m {duration % 60 ? `${duration % 60}s` : ''})
-                </span>
-              </div>
+          </div>
 
-              <div className="flex items-center gap-2 sm:gap-3">
-                {DURATION_PRESETS.map((preset) => (
-                  <button
-                    key={preset.value}
-                    type="button"
-                    onClick={() => setDuration(preset.value)}
-                    className={`flex-1 py-2 rounded-xl text-xs font-medium border transition-all ${
-                      duration === preset.value
-                        ? 'bg-teal-500/20 border-teal-500 text-teal-300 shadow-sm'
-                        : 'bg-gray-900/60 border-gray-800 text-gray-400 hover:text-gray-200'
-                    }`}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Generate Action Button */}
-            <div className="pt-2">
-              <button
-                type="submit"
-                disabled={isGenerating || !codeInfo?.valid || codeInfo?.isExhausted}
-                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:via-pink-500 hover:to-indigo-500 text-white font-bold text-base shadow-xl shadow-purple-900/40 hover:shadow-purple-700/50 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 relative overflow-hidden"
-              >
-                {isGenerating ? (
-                  <>
-                    <RefreshCw className="w-5 h-5 animate-spin" />
-                    <span>Creando tu canción personalizada...</span>
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="w-5 h-5 text-pink-200" />
-                    <span>Generar Canción con ElevenLabs</span>
-                  </>
-                )}
-              </button>
-              {!codeInfo?.valid && (
-                <p className="text-[11px] text-amber-400/90 text-center mt-2">
-                  ⚠️ Debes validar un código de acceso arriba para habilitar la generación.
-                </p>
-              )}
-            </div>
-
-            {/* Live generation progress banner */}
-            {isGenerating && (
-              <div className="p-4 rounded-2xl bg-purple-950/40 border border-purple-800/60 space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between text-xs text-purple-300">
-                  <span className="font-semibold">{loadingSteps[generationStep]}</span>
-                  <span className="font-mono">{((generationStep + 1) * 25)}%</span>
-                </div>
-                <div className="w-full h-1.5 bg-gray-900 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700 rounded-full"
-                    style={{ width: `${(generationStep + 1) * 25}%` }}
-                  />
-                </div>
-                <p className="text-[11px] text-gray-400 text-center">
-                  ElevenLabs está sintetizando la música y las vocales. Esto toma entre 10 y 25 segundos.
-                </p>
-              </div>
-            )}
-
-          </form>
-
+          <div className="pt-8 border-t border-gray-900 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-gray-500">
+            <p>© {new Date().getFullYear()} SerenatIA • Todos los derechos reservados.</p>
+            <p>Música generada con IA para uso personal y celebraciones.</p>
+          </div>
         </div>
-      )}
+      </footer>
 
     </div>
   );

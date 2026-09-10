@@ -89,6 +89,30 @@ const verifyAdmin = (req, res, next) => {
   next();
 };
 
+// Helper: Fetch ElevenLabs subscription/credit quota
+const fetchElevenLabsQuota = async (apiKey) => {
+  if (!apiKey) return null;
+  try {
+    const res = await fetch('https://api.elevenlabs.io/v1/user/subscription', {
+      headers: { 'xi-api-key': apiKey }
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      tier: data.tier,
+      used: data.character_count,
+      limit: data.character_limit,
+      remaining: Math.max(0, (data.character_limit || 0) - (data.character_count || 0)),
+      resetAt: data.next_character_count_reset_unix
+        ? new Date(data.next_character_count_reset_unix * 1000).toISOString()
+        : null
+    };
+  } catch (e) {
+    console.error('Error fetching ElevenLabs quota:', e);
+    return null;
+  }
+};
+
 // --- GENERAL & PUBLIC ENDPOINTS ---
 
 // Healthcheck
@@ -446,11 +470,165 @@ app.delete('/api/admin/codes/:code', verifyAdmin, (req, res) => {
   res.json({ success: true, message: 'Código eliminado exitosamente' });
 });
 
+// Get live ElevenLabs credit quota
+app.get('/api/admin/quota', verifyAdmin, async (req, res) => {
+  const settings = readJSON(SETTINGS_FILE, {});
+  const activeApiKey = (settings.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY || '').trim();
+
+  if (!activeApiKey) {
+    return res.status(400).json({ error: 'No hay una API Key de ElevenLabs configurada.' });
+  }
+
+  const quota = await fetchElevenLabsQuota(activeApiKey);
+  if (!quota) {
+    return res.status(502).json({ error: 'No se pudo consultar la cuota en ElevenLabs. Verifica la API Key.' });
+  }
+
+  res.json(quota);
+});
+
+// Generate a demo song (Superadmin only, does not consume access codes)
+app.post('/api/admin/demo/generate', verifyAdmin, async (req, res) => {
+  const { demoId, names, references, style, duration } = req.body;
+
+  const settings = readJSON(SETTINGS_FILE, {});
+  const activeApiKey = (settings.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY || '').trim();
+
+  if (!activeApiKey) {
+    return res.status(400).json({ error: 'No hay una API Key de ElevenLabs configurada. Configúrala en la pestaña de Configuración.' });
+  }
+
+  const durationSec = Math.max(10, Math.min(parseInt(duration, 10) || 30, 300));
+  const songId = 'demo_' + crypto.randomBytes(6).toString('hex');
+  const filename = `${songId}.mp3`;
+  const filePath = path.join(STORAGE_DIR, filename);
+
+  const songStyle = style || 'Pop acústico';
+  const songNames = names || 'Demo';
+  const songRefs = references || '';
+
+  const prompt = `A dynamic, high-fidelity ${songStyle} song dedicated to "${songNames}". Inspiration and lyrical context: ${songRefs}. Studio production, melodic hooks, emotional vocals and rhythm.`;
+
+  try {
+    const quotaBefore = await fetchElevenLabsQuota(activeApiKey);
+
+    console.log(`[ADMIN DEMO] Generating demo "${demoId}" | Style: ${songStyle} | Duration: ${durationSec}s`);
+    const elevenRes = await fetch('https://api.elevenlabs.io/v1/music/compose', {
+      method: 'POST',
+      headers: {
+        'xi-api-key': activeApiKey,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prompt: prompt,
+        music_length_ms: durationSec * 1000,
+        model_id: 'music_v2'
+      })
+    });
+
+    if (!elevenRes.ok) {
+      let errDetails = '';
+      try {
+        const errJson = await elevenRes.json();
+        errDetails = errJson.detail?.message || errJson.message || JSON.stringify(errJson);
+      } catch {
+        errDetails = await elevenRes.text();
+      }
+      console.error(`ElevenLabs API error (${elevenRes.status}):`, errDetails);
+      return res.status(elevenRes.status).json({
+        error: `Error de ElevenLabs (${elevenRes.status}): ${errDetails}`
+      });
+    }
+
+    const headerReqId = elevenRes.headers.get('request-id') || elevenRes.headers.get('x-request-id');
+    const elevenlabsId = headerReqId || `el_${crypto.randomBytes(8).toString('hex')}`;
+
+    const arrayBuffer = await elevenRes.arrayBuffer();
+    const audioBuffer = Buffer.from(arrayBuffer);
+
+    fs.writeFileSync(filePath, audioBuffer);
+    const stats = fs.statSync(filePath);
+
+    const quotaAfter = await fetchElevenLabsQuota(activeApiKey);
+    const creditsUsed = (quotaBefore && quotaAfter) ? Math.max(0, quotaAfter.used - quotaBefore.used) : null;
+
+    const record = {
+      id: songId,
+      code: 'DEMO',
+      codeLabel: `Demo Superadmin (${demoId || 'sin-id'})`,
+      elevenlabsId: elevenlabsId,
+      ip: getClientIp(req),
+      timestamp: new Date().toISOString(),
+      names: songNames,
+      references: songRefs,
+      style: songStyle,
+      duration: durationSec,
+      filename: filename,
+      fileSizeBytes: stats.size,
+      audioUrl: `/api/storage/songs/${filename}`,
+      prompt: prompt,
+      isSimulated: false,
+      isDemo: true,
+      demoId: demoId || null,
+      creditsUsed: creditsUsed
+    };
+
+    const history = readJSON(HISTORY_FILE, []);
+    history.unshift(record);
+    writeJSON(HISTORY_FILE, history);
+
+    console.log(`[ADMIN DEMO SUCCESS] Song: ${songId} | Credits used: ${creditsUsed ?? 'desconocido'}`);
+
+    return res.json({
+      success: true,
+      song: record,
+      creditsUsed,
+      quotaBefore,
+      quotaAfter
+    });
+  } catch (error) {
+    console.error('Unexpected error generating demo song:', error);
+    return res.status(500).json({
+      error: 'Error interno del servidor al procesar la canción demo: ' + error.message
+    });
+  }
+});
+
+// Public: list showcase demo songs for the landing page
+const PUBLIC_DEMO_ORDER = ['demo-a-pedida-novia', 'demo-b-nana-martina', 'demo-c-cumple-papa'];
+
+app.get('/api/demos', (req, res) => {
+  const history = readJSON(HISTORY_FILE, []);
+  const demoRecords = history.filter((s) => s.isDemo && s.demoId);
+
+  const latestByDemoId = {};
+  demoRecords.forEach((s) => {
+    const existing = latestByDemoId[s.demoId];
+    if (!existing || new Date(s.timestamp) > new Date(existing.timestamp)) {
+      latestByDemoId[s.demoId] = s;
+    }
+  });
+
+  const ordered = PUBLIC_DEMO_ORDER
+    .map((id) => latestByDemoId[id])
+    .filter(Boolean)
+    .map((s) => ({
+      demoId: s.demoId,
+      names: s.names,
+      references: s.references,
+      style: s.style,
+      duration: s.duration,
+      audioUrl: s.audioUrl
+    }));
+
+  res.json(ordered);
+});
+
 // Serve frontend static files if dist folder exists (production / Docker mode)
 const DIST_DIR = path.join(__dirname, '../dist');
 if (fs.existsSync(DIST_DIR)) {
   app.use(express.static(DIST_DIR));
-  app.get('*', (req, res) => {
+  app.get(/(.*)/, (req, res) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(DIST_DIR, 'index.html'));
     }

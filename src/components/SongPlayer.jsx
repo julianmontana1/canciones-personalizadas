@@ -131,7 +131,7 @@ export default function SongPlayer({ song, title, subtitle }) {
                 {title || song?.names || 'Tu Canción'}
               </h3>
               <p className="text-xs sm:text-sm text-gray-400 mt-0.5 line-clamp-1">
-                {subtitle || song?.references || 'Composición única generada con ElevenLabs'}
+                {subtitle || song?.references || 'Composición única generada con IA'}
               </p>
             </div>
           </div>

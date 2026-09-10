@@ -1,9 +1,46 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  ShieldCheck, RefreshCw, Search, Download, Trash2, Play, Pause, 
-  Clock, Globe, Music, Key, FileAudio, AlertCircle, Copy, Check, 
-  LogOut, ArrowLeft, Settings, Users, PlusCircle, CheckCircle2, Lock
+import {
+  ShieldCheck, RefreshCw, Search, Download, Trash2, Play, Pause,
+  Clock, Globe, Music, Key, FileAudio, AlertCircle, Copy, Check,
+  LogOut, ArrowLeft, Settings, Users, PlusCircle, CheckCircle2, Lock,
+  Zap, Heart, Moon, Cake, FlaskConical, Gauge
 } from 'lucide-react';
+
+// Fixed demo scripts used to measure ElevenLabs credit consumption per genre/duration.
+const DEMOS = [
+  {
+    id: 'demo-a-pedida-novia',
+    label: 'Demo A · Pedida de Novia',
+    icon: Heart,
+    accentClass: 'bg-rose-500/10 border-rose-500/20 text-rose-400',
+    style: 'Balada Romántica',
+    names: 'Andrés para Camila',
+    references: 'Andrés conoció a Camila hace 3 meses en la fila de un café en Bogotá, un día que llovía muy fuerte; a ella se le cayeron los libros, él la ayudó a recogerlos y terminaron hablando dos horas sin darse cuenta. Desde esa tarde no han dejado de hablar todos los días: han ido a cine, a caminar por el parque, y ella siempre se ríe de sus chistes malos. Él quiere sorprenderla pidiéndole que sean novios oficialmente. Que la canción cuente ese primer encuentro bajo la lluvia, lo nervioso que estaba ese día, y cómo en estos 3 meses se dio cuenta de que quiere algo serio con ella. Que termine con la pregunta directa "Camila, ¿quieres ser mi novia?" en el coro final, con un tono íntimo que va creciendo hasta un cierre emotivo y esperanzador.',
+    duration: 90
+  },
+  {
+    id: 'demo-b-nana-martina',
+    label: 'Demo B · Nana para Martina',
+    icon: Moon,
+    accentClass: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
+    style: 'Canción de Dormir / Nana',
+    names: 'Martina',
+    references: 'Hoy Martina tuvo un día enorme: fue al parque con su papá y su mamá, se subió al columpio más alto que pudo, encontró un perrito café y le puso de nombre "Nube", pintó un dibujo de una casa con un sol gigante para pegarlo en la nevera, y en la tarde se rió muchísimo jugando con su abuela a las escondidas. Ahora ya cenó, se puso su pijama de estrellas y es hora de dormir. Quiero una nana suave que primero recuerde con cariño esas aventuras del día (el perrito, el columpio, el dibujo), y que después vaya bajando el ritmo poco a poco hasta quedar casi en un susurro, hablando de que las estrellas y los ángeles la van a cuidar toda la noche, que mañana habrá más aventuras, y que papá y mamá la aman muchísimo. Que termine repitiendo suavecito su nombre, "Martina", como arrullo final.',
+    duration: 180
+  },
+  {
+    id: 'demo-c-cumple-papa',
+    label: 'Demo C · Cumpleaños de Papá',
+    icon: Cake,
+    accentClass: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+    style: 'Banda Sinaloense',
+    names: 'Don Roberto',
+    references: 'Hoy es el cumpleaños de Don Roberto y toda la familia se reunió en su casa: sus hijos, sus nietos y hasta llegó su hermano desde Medellín para sorprenderlo. Es un hombre trabajador que toda la vida madrugó para sacar adelante a su familia, y hoy quieren que se relaje, la pase bien y sienta cuánto lo quieren. Quiero una canción de banda bien animada, con trompetas y tambora fuerte desde el inicio, que hable de agradecerle todo su esfuerzo, que lo invite a bailar y a tomarse un trago con los suyos, y que en el coro repita su nombre "Roberto" deseándole un feliz cumpleaños con mucha fiesta y muchos años más de vida.',
+    duration: 60
+  }
+];
+
+const COOLDOWN_MS = 5 * 60 * 1000;
 
 export default function AdminView({ adminKey, onLogout, onBackToUser }) {
   const [activeTab, setActiveTab] = useState('audit'); // 'audit' | 'codes' | 'settings'
@@ -34,11 +71,22 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
   const [settingsSuccessMsg, setSettingsSuccessMsg] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
+  // Quota state
+  const [quota, setQuota] = useState(null);
+  const [isLoadingQuota, setIsLoadingQuota] = useState(false);
+  const [quotaError, setQuotaError] = useState('');
+
+  // Demos state
+  const [demoStates, setDemoStates] = useState({}); // { [demoId]: { loading, result, error } }
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [now, setNow] = useState(Date.now());
+
   // Initial loads
   useEffect(() => {
     fetchHistory();
     fetchCodes();
     fetchSettings();
+    fetchQuota();
 
     const audio = audioRef.current;
     const handleEnded = () => setIsPlaying(false);
@@ -49,6 +97,13 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
       audio.removeEventListener('ended', handleEnded);
     };
   }, [adminKey]);
+
+  // Cooldown ticker (only runs while a cooldown is active)
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return;
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [cooldownUntil]);
 
   // Fetch History
   const fetchHistory = async () => {
@@ -235,6 +290,79 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
     }
   };
 
+  // Fetch live ElevenLabs quota
+  const fetchQuota = async () => {
+    setIsLoadingQuota(true);
+    setQuotaError('');
+    try {
+      const res = await fetch('/api/admin/quota', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setQuota(data);
+      } else {
+        setQuota(null);
+        setQuotaError(data.error || 'No se pudo consultar la cuota.');
+      }
+    } catch (err) {
+      setQuota(null);
+      setQuotaError('Error al contactar con el servidor.');
+    } finally {
+      setIsLoadingQuota(false);
+    }
+  };
+
+  // Generate a demo song
+  const handleGenerateDemo = async (demo) => {
+    if (now < cooldownUntil) return;
+
+    setDemoStates((prev) => ({
+      ...prev,
+      [demo.id]: { ...(prev[demo.id] || {}), loading: true, error: '' }
+    }));
+
+    try {
+      const res = await fetch('/api/admin/demo/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey
+        },
+        body: JSON.stringify({
+          demoId: demo.id,
+          names: demo.names,
+          references: demo.references,
+          style: demo.style,
+          duration: demo.duration
+        })
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        setDemoStates((prev) => ({
+          ...prev,
+          [demo.id]: { loading: false, error: '', result: data }
+        }));
+        const until = Date.now() + COOLDOWN_MS;
+        setCooldownUntil(until);
+        setNow(Date.now());
+        fetchHistory();
+        fetchQuota();
+      } else {
+        setDemoStates((prev) => ({
+          ...prev,
+          [demo.id]: { loading: false, error: data.error || 'Error al generar la demo', result: prev[demo.id]?.result }
+        }));
+      }
+    } catch (err) {
+      setDemoStates((prev) => ({
+        ...prev,
+        [demo.id]: { loading: false, error: 'Error de conexión con el servidor', result: prev[demo.id]?.result }
+      }));
+    }
+  };
+
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -337,6 +465,19 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         >
           <Users className="w-4 h-4" />
           <span>Control de Códigos ({codes.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('demos')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            activeTab === 'demos'
+              ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm'
+              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900'
+          }`}
+        >
+          <FlaskConical className="w-4 h-4" />
+          <span>Demos & Consumo</span>
         </button>
 
         <button
@@ -744,9 +885,175 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         </div>
       )}
 
+      {/* TAB: DEMOS & MEDICIÓN DE CONSUMO */}
+      {activeTab === 'demos' && (
+        <div className="space-y-6">
+          <div className="glass-panel p-5 rounded-2xl border border-gray-800 flex items-start gap-3">
+            <Zap className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-white">Genera 1 demo a la vez, con 5 minutos de espera entre cada una</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                Cada botón queda bloqueado 5 minutos después de generar una demo, para que puedas revisar el consumo exacto en tu
+                panel de ElevenLabs antes de la siguiente. Los créditos "Antes/Después" que ves aquí vienen de la cuota real de tu cuenta.
+              </p>
+              {now < cooldownUntil && (
+                <p className="text-xs font-semibold text-amber-300 mt-2">
+                  ⏳ Próxima demo disponible en {Math.floor((cooldownUntil - now) / 60000)}:{String(Math.floor(((cooldownUntil - now) % 60000) / 1000)).padStart(2, '0')}
+                </p>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {DEMOS.map((demo) => {
+              const state = demoStates[demo.id] || {};
+              const Icon = demo.icon;
+              const isDisabled = state.loading || now < cooldownUntil;
+
+              return (
+                <div key={demo.id} className="glass-panel rounded-2xl border border-gray-800 p-5 flex flex-col gap-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${demo.accentClass}`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-bold text-white">{demo.label}</div>
+                      <div className="text-[11px] text-gray-400">{demo.style} • {demo.duration}s</div>
+                    </div>
+                  </div>
+
+                  <div className="text-[11px] text-gray-400 bg-gray-950 border border-gray-800 rounded-xl p-3 space-y-1.5">
+                    <div><span className="text-gray-500">Para:</span> <span className="text-gray-200">{demo.names}</span></div>
+                    <div><span className="text-gray-500">Historia enviada:</span> <span className="text-gray-300">{demo.references}</span></div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleGenerateDemo(demo)}
+                    disabled={isDisabled}
+                    className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                      isDisabled
+                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white shadow-md'
+                    }`}
+                  >
+                    {state.loading ? 'Generando en ElevenLabs...' : 'Generar Demo'}
+                  </button>
+
+                  {state.error && (
+                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{state.error}</span>
+                    </div>
+                  )}
+
+                  {state.result && (
+                    <div className="space-y-2.5 pt-2 border-t border-gray-800">
+                      <audio controls src={state.result.song.audioUrl} className="w-full h-9" />
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 rounded-lg bg-gray-950 border border-gray-800">
+                          <div className="text-[9px] uppercase text-gray-500">Antes</div>
+                          <div className="text-xs font-bold text-gray-300">{state.result.quotaBefore?.used?.toLocaleString('es-CO') ?? '—'}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-gray-950 border border-gray-800">
+                          <div className="text-[9px] uppercase text-gray-500">Después</div>
+                          <div className="text-xs font-bold text-gray-300">{state.result.quotaAfter?.used?.toLocaleString('es-CO') ?? '—'}</div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/40">
+                          <div className="text-[9px] uppercase text-emerald-500">Consumidos</div>
+                          <div className="text-xs font-bold text-emerald-300">
+                            {state.result.creditsUsed != null ? state.result.creditsUsed.toLocaleString('es-CO') : '—'}
+                          </div>
+                        </div>
+                      </div>
+                      <a
+                        href={state.result.song.audioUrl}
+                        download={state.result.song.filename}
+                        className="flex items-center justify-center gap-2 py-1.5 text-[11px] text-emerald-400 hover:text-emerald-200"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Descargar MP3</span>
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* TAB 3: SETTINGS & ELEVENLABS API KEY */}
       {activeTab === 'settings' && (
         <div className="max-w-2xl space-y-6">
+          <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-gray-800 shadow-xl space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <Gauge className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                <span>Cuota Disponible en ElevenLabs</span>
+              </h3>
+              <button
+                type="button"
+                onClick={fetchQuota}
+                className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingQuota ? 'animate-spin' : ''}`} />
+                <span>Refrescar</span>
+              </button>
+            </div>
+
+            {quotaError && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                <span>{quotaError}</span>
+              </div>
+            )}
+
+            {quota && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-xl bg-gray-950 border border-gray-800">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500">Plan</span>
+                  <div className="text-sm font-bold text-white capitalize mt-0.5">{quota.tier || '—'}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-gray-950 border border-gray-800">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500">Usados</span>
+                  <div className="text-sm font-bold text-amber-300 mt-0.5">{quota.used?.toLocaleString('es-CO') ?? '—'}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-gray-950 border border-gray-800">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500">Disponibles</span>
+                  <div className="text-sm font-bold text-emerald-400 mt-0.5">{quota.remaining?.toLocaleString('es-CO') ?? '—'}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-gray-950 border border-gray-800">
+                  <span className="text-[10px] uppercase tracking-wider text-gray-500">Límite Total</span>
+                  <div className="text-sm font-bold text-gray-300 mt-0.5">{quota.limit?.toLocaleString('es-CO') ?? '—'}</div>
+                </div>
+                {quota.remaining != null && quota.limit != null && (
+                  <div className="col-span-2 sm:col-span-4">
+                    <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${quota.remaining / quota.limit < 0.15 ? 'bg-rose-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, (quota.used / quota.limit) * 100)}%` }}
+                      />
+                    </div>
+                    {quota.resetAt && (
+                      <p className="text-[11px] text-gray-500 mt-1.5">
+                        Se reinicia: {formatDate(quota.resetAt)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!quota && !quotaError && (
+              <p className="text-xs text-gray-500">Consultando cuota en ElevenLabs...</p>
+            )}
+
+            <p className="text-[11px] text-gray-500">
+              Este pool es compartido por todos los que usan la misma API Key (workspace), incluidos tus clientes en producción.
+            </p>
+          </div>
+
           <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-gray-800 shadow-xl space-y-6">
             <div>
               <h3 className="text-lg font-bold text-white flex items-center gap-2">

@@ -26,6 +26,9 @@ server/data/history.local.json
 server/storage/songs/*
 !server/storage/songs/.gitkeep
 
+# Raw source images (unprocessed originals, not needed once optimized into public/images)
+/demoimages/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

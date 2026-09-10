@@ -5,20 +5,35 @@ import AdminView from './components/AdminView';
 import AdminLoginModal from './components/AdminLoginModal';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState('user'); // 'user' | 'admin'
+  const [currentView, setCurrentView] = useState(() => window.location.hash === '#/admin' ? 'admin' : 'user'); // 'user' | 'admin'
   const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem('el_admin_key') || '');
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => window.location.hash === '#/admin' && !sessionStorage.getItem('el_admin_key'));
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#/admin') {
+        if (!sessionStorage.getItem('el_admin_key')) {
+          setIsLoginModalOpen(true);
+        } else {
+          setCurrentView('admin');
+        }
+      } else {
+        setCurrentView('user');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const isAdminAuthenticated = Boolean(adminKey);
 
   const handleSelectView = (view) => {
     if (view === 'admin') {
-      if (!isAdminAuthenticated) {
-        setIsLoginModalOpen(true);
-        return;
-      }
+      window.location.hash = '#/admin';
+    } else {
+      window.location.hash = '';
+      setCurrentView('user');
     }
-    setCurrentView(view);
   };
 
   const handleAdminLoginSuccess = (key) => {
@@ -31,6 +46,7 @@ export default function App() {
   const handleAdminLogout = () => {
     setAdminKey('');
     sessionStorage.removeItem('el_admin_key');
+    window.location.hash = '';
     setCurrentView('user');
   };
 
@@ -67,24 +83,17 @@ export default function App() {
         onSuccess={handleAdminLoginSuccess}
       />
 
-      {/* Modern Footer */}
-      <footer className="border-t border-gray-900 bg-gray-950/60 py-6 text-center text-xs text-gray-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© {new Date().getFullYear()} SongCraft AI • Generador de Canciones con ElevenLabs</p>
-          <div className="flex items-center gap-4 text-[11px] text-gray-400">
-            <span>Privacidad protegida</span>
-            <span>•</span>
-            <span>Descarga directa en MP3</span>
-            <span>•</span>
-            <button
-              onClick={() => handleSelectView('admin')}
-              className="text-purple-400 hover:text-purple-300 transition-colors"
-            >
-              Acceso Superadmin
-            </button>
+      {/* Admin Minimal Footer */}
+      {currentView === 'admin' && (
+        <footer className="border-t border-gray-900 bg-gray-950/60 py-6 text-center text-xs text-gray-500">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p>© {new Date().getFullYear()} SerenatIA • Panel de Administración</p>
+            <div className="flex items-center gap-4 text-[11px] text-gray-400">
+              <span>Gestión de Códigos y Canciones</span>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
