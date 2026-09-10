@@ -18,6 +18,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3001
 
+# ffmpeg is used server-side to transcode browser-recorded WebM video into real MP4
+RUN apk add --no-cache ffmpeg
+
 # Install only production dependencies
 COPY package*.json ./
 RUN npm ci --omit=dev

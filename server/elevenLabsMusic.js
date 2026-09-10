@@ -1,8 +1,15 @@
-// Wraps the ElevenLabs /v1/music/compose call with automatic recovery from
+// Wraps the ElevenLabs /v1/music/detailed call with automatic recovery from
 // "bad_prompt" rejections (copyrighted material, e.g. a customer typing an
 // artist's name like "estilo Carlos Vives"). ElevenLabs returns a rewritten
 // prompt_suggestion in that case — we retry once with it automatically so the
 // customer still gets their song without ever seeing an error.
+//
+// Unlike the plain /v1/music/compose endpoint (raw audio bytes only), /detailed
+// returns a multipart/mixed response with a JSON part (real lyrics + word-level
+// timestamps) alongside the audio — that's what powers accurate karaoke video sync.
+
+import { extractBoundary, parseMultipart } from './multipart.js';
+import { buildLyricsLines } from './lyricsFromTimestamps.js';
 
 export class ElevenLabsComposeError extends Error {
   constructor(userMessage, { status = 502, details = '' } = {}) {
@@ -14,7 +21,7 @@ export class ElevenLabsComposeError extends Error {
   }
 }
 
-const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music/compose';
+const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music/detailed';
 
 const requestCompose = async (apiKey, prompt, durationSec) => {
   const res = await fetch(COMPOSE_URL, {
@@ -26,7 +33,8 @@ const requestCompose = async (apiKey, prompt, durationSec) => {
     body: JSON.stringify({
       prompt,
       music_length_ms: durationSec * 1000,
-      model_id: 'music_v2'
+      model_id: 'music_v2',
+      with_timestamps: true
     })
   });
   return res;
@@ -38,6 +46,41 @@ const parseErrorBody = async (res) => {
   } catch {
     return { json: null, text: await res.text() };
   }
+};
+
+// Parses the multipart/mixed success response into { audioBuffer, lyricsLines }.
+const parseDetailedResponse = async (res) => {
+  const contentType = res.headers.get('content-type') || '';
+  const boundary = extractBoundary(contentType);
+  const buffer = Buffer.from(await res.arrayBuffer());
+
+  if (!boundary) {
+    // Unexpected shape (e.g. ElevenLabs changed the response format) — still
+    // return playable audio rather than hard-failing the whole generation.
+    return { audioBuffer: buffer, lyricsLines: [], songMetadata: null };
+  }
+
+  const parts = parseMultipart(buffer, boundary);
+  const jsonPart = parts.find((p) => (p.headers['content-type'] || '').includes('application/json'));
+  const audioPart = parts.find((p) => (p.headers['content-type'] || '').startsWith('audio/'));
+
+  const audioBuffer = audioPart ? audioPart.body : buffer;
+  let lyricsLines = [];
+  let songMetadata = null;
+
+  if (jsonPart) {
+    try {
+      const metadata = JSON.parse(jsonPart.body.toString('utf-8'));
+      const chunks = metadata?.composition_plan?.chunks || [];
+      const { lines, isFullyTimed } = buildLyricsLines(chunks, metadata?.words_timestamps);
+      lyricsLines = isFullyTimed ? lines : [];
+      songMetadata = metadata?.song_metadata || null;
+    } catch (err) {
+      console.warn('[ElevenLabs] No se pudo parsear el JSON de metadata del multipart:', err.message);
+    }
+  }
+
+  return { audioBuffer, lyricsLines, songMetadata };
 };
 
 // Composes a song, automatically retrying once with ElevenLabs' own suggested
@@ -56,12 +99,14 @@ export const composeMusic = async ({ apiKey, prompt, durationSec, logPrefix = ''
       const retryRes = await requestCompose(apiKey, suggestion, durationSec);
 
       if (retryRes.ok) {
-        const arrayBuffer = await retryRes.arrayBuffer();
+        const { audioBuffer, lyricsLines, songMetadata } = await parseDetailedResponse(retryRes);
         return {
-          audioBuffer: Buffer.from(arrayBuffer),
+          audioBuffer,
+          lyricsLines,
+          songMetadata,
           finalPrompt: suggestion,
           wasRewritten: true,
-          headerReqId: retryRes.headers.get('request-id') || retryRes.headers.get('x-request-id')
+          headerReqId: retryRes.headers.get('song-id') || retryRes.headers.get('request-id') || retryRes.headers.get('x-request-id')
         };
       }
 
@@ -89,11 +134,13 @@ export const composeMusic = async ({ apiKey, prompt, durationSec, logPrefix = ''
     );
   }
 
-  const arrayBuffer = await res.arrayBuffer();
+  const { audioBuffer, lyricsLines, songMetadata } = await parseDetailedResponse(res);
   return {
-    audioBuffer: Buffer.from(arrayBuffer),
+    audioBuffer,
+    lyricsLines,
+    songMetadata,
     finalPrompt: prompt,
     wasRewritten: false,
-    headerReqId: res.headers.get('request-id') || res.headers.get('x-request-id')
+    headerReqId: res.headers.get('song-id') || res.headers.get('request-id') || res.headers.get('x-request-id')
   };
 };

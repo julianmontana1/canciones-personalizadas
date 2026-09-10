@@ -5,6 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import os from 'os';
+import { execFile } from 'child_process';
 import { buildMusicPrompt } from './genreProfiles.js';
 import { composeMusic, ElevenLabsComposeError } from './elevenLabsMusic.js';
 import { containsOffensiveLanguage } from './contentFilter.js';
@@ -180,7 +182,8 @@ app.get('/api/codes/my-songs', (req, res) => {
       duration: s.duration,
       audioUrl: s.audioUrl,
       filename: s.filename,
-      timestamp: s.timestamp
+      timestamp: s.timestamp,
+      lyricsLines: s.lyricsLines || []
     }));
 
   res.json(mySongs);
@@ -199,6 +202,57 @@ app.get('/api/storage/songs/:filename', (req, res) => {
   res.setHeader('Content-Type', 'audio/mpeg');
   res.setHeader('Accept-Ranges', 'bytes');
   res.sendFile(filePath);
+});
+
+// Transcode a browser-recorded video (WebM, from canvas + MediaRecorder capture) into
+// a real, widely-compatible MP4 (H.264/AAC). Browsers' MediaRecorder can't reliably
+// produce MP4 directly across Chrome/Firefox, so the client always records WebM and
+// this endpoint converts it server-side with ffmpeg before the user downloads it.
+const VIDEO_TMP_DIR = path.join(os.tmpdir(), 'serenatia-video-export');
+if (!fs.existsSync(VIDEO_TMP_DIR)) fs.mkdirSync(VIDEO_TMP_DIR, { recursive: true });
+
+app.post('/api/video/transcode', express.raw({ type: 'video/webm', limit: '200mb' }), (req, res) => {
+  if (!req.body || !req.body.length) {
+    return res.status(400).json({ error: 'No se recibió ningún video para convertir.' });
+  }
+
+  const jobId = crypto.randomBytes(6).toString('hex');
+  const inputPath = path.join(VIDEO_TMP_DIR, `${jobId}.webm`);
+  const outputPath = path.join(VIDEO_TMP_DIR, `${jobId}.mp4`);
+
+  fs.writeFileSync(inputPath, req.body);
+
+  execFile(
+    'ffmpeg',
+    [
+      '-y',
+      '-i', inputPath,
+      '-c:v', 'libx264',
+      '-preset', 'fast',
+      '-crf', '23',
+      '-pix_fmt', 'yuv420p',
+      '-c:a', 'aac',
+      '-b:a', '192k',
+      '-movflags', '+faststart',
+      outputPath
+    ],
+    { maxBuffer: 1024 * 1024 * 20 },
+    (err, _stdout, stderr) => {
+      fs.unlink(inputPath, () => {});
+
+      if (err) {
+        console.error('[VIDEO TRANSCODE] ffmpeg error:', stderr || err.message);
+        return res.status(500).json({ error: 'No se pudo convertir el video a MP4.' });
+      }
+
+      res.setHeader('Content-Type', 'video/mp4');
+      res.setHeader('Content-Disposition', 'attachment; filename="video.mp4"');
+      const stream = fs.createReadStream(outputPath);
+      stream.pipe(res);
+      stream.on('close', () => fs.unlink(outputPath, () => {}));
+      stream.on('error', () => fs.unlink(outputPath, () => {}));
+    }
+  );
 });
 
 // Generate song endpoint
@@ -259,15 +313,16 @@ app.post('/api/generate', async (req, res) => {
 
   let elevenlabsId = `el_${crypto.randomBytes(8).toString('hex')}`;
   let audioBuffer = null;
+  let lyricsLines = [];
 
   try {
     if (isDemo) {
       console.log(`[DEMO GENERATION] Code: ${userCode.code} | IP: ${ip}`);
       elevenlabsId = `sim_${Date.now()}`;
-      
+
       // Generate synthetic playable MP3 buffer
       const demoMp3Header = Buffer.from([
-        0xFF, 0xFB, 0x90, 0x64, 0x00, 0x00, 0x00, 0x00, 
+        0xFF, 0xFB, 0x90, 0x64, 0x00, 0x00, 0x00, 0x00,
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
       ]);
       const chunks = [];
@@ -285,6 +340,7 @@ app.post('/api/generate', async (req, res) => {
       });
 
       audioBuffer = composeResult.audioBuffer;
+      lyricsLines = composeResult.lyricsLines || [];
       if (composeResult.headerReqId) {
         elevenlabsId = composeResult.headerReqId;
       }
@@ -318,7 +374,8 @@ app.post('/api/generate', async (req, res) => {
       fileSizeBytes: stats.size,
       audioUrl: `/api/storage/songs/${filename}`,
       prompt: prompt,
-      isSimulated: isDemo
+      isSimulated: isDemo,
+      lyricsLines: lyricsLines
     };
 
     const history = readJSON(HISTORY_FILE, []);
@@ -335,10 +392,12 @@ app.post('/api/generate', async (req, res) => {
       song: {
         id: songId,
         names: songNames,
+        references: songRefs,
         style: songStyle,
         duration: durationSec,
         audioUrl: `/api/storage/songs/${filename}`,
-        filename: filename
+        filename: filename,
+        lyricsLines: lyricsLines
       }
     });
 
@@ -555,7 +614,8 @@ app.post('/api/admin/demo/generate', verifyAdmin, async (req, res) => {
       isSimulated: false,
       isDemo: true,
       demoId: demoId || null,
-      creditsUsed: creditsUsed
+      creditsUsed: creditsUsed,
+      lyricsLines: composeResult.lyricsLines || []
     };
 
     const history = readJSON(HISTORY_FILE, []);

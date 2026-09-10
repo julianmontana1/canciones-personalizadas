@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Download, Volume2, VolumeX, Sparkles, Music, CheckCircle2 } from 'lucide-react';
+import { Play, Pause, Download, Volume2, VolumeX, Sparkles, Music, CheckCircle2, Video } from 'lucide-react';
 
-export default function SongPlayer({ song, title, subtitle }) {
+export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }) {
   const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -239,6 +239,29 @@ export default function SongPlayer({ song, title, subtitle }) {
           >
             <Download className="w-4 h-4" />
             <span>DESCARGAR CANCIÓN MP3</span>
+          </button>
+        </div>
+
+        {/* CREATE VIDEO WITH PHOTOS BANNER */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-indigo-950/40 p-4 rounded-2xl border border-pink-500/40 shadow-lg shadow-pink-950/30">
+          <div className="text-center sm:text-left">
+            <div className="font-bold text-white text-sm flex items-center justify-center sm:justify-start gap-1.5">
+              <Video className="w-4 h-4 text-pink-400" />
+              <span>¿Quieres convertirla en video con tus fotos?</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            </div>
+            <p className="text-xs text-gray-300 mt-0.5">
+              Agrega hasta 5 fotos y genera un video vertical (9:16) con la letra para Estados de WhatsApp, Reels o TikTok.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => onOpenVideoCreator && onOpenVideoCreator(song)}
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-xl shadow-pink-900/60 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 flex-shrink-0 shimmer-effect"
+          >
+            <Video className="w-4 h-4 text-pink-200" />
+            <span>CREAR VIDEO CON MIS FOTOS</span>
           </button>
         </div>
 

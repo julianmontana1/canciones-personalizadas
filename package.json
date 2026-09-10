@@ -11,12 +11,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@remotion/player": "^4.0.523",
+    "@remotion/transitions": "^4.0.523",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "lucide-react": "^1.43.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "remotion": "^4.0.523"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

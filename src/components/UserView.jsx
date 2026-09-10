@@ -11,6 +11,9 @@ import SongPlayer from './SongPlayer';
 import VoiceAssistantModal from './VoiceAssistantModal';
 import SongWizard from './SongWizard';
 import Sparkle, { SparkleCluster } from './Sparkle';
+import AccessCodeTopBar from './AccessCodeTopBar';
+import UserCreationsModal from './UserCreationsModal';
+import SongVideoCreatorModal from './SongVideoCreatorModal';
 import { playGenrePreview, stopAllAudioPreviews } from '../utils/genreAudioSynthesizer';
 import { MOOD_FILTERS, filterByMood } from '../utils/moodFilters';
 import { createSpeechRecognizer } from '../utils/speechRecognition';
@@ -108,9 +111,28 @@ export default function UserView() {
     }
   });
 
-  // Code history state
+  // Code history & Creations state
   const [myCodeSongs, setMyCodeSongs] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [isCreationsModalOpen, setIsCreationsModalOpen] = useState(false);
+  const [isSongVideoCreatorOpen, setIsSongVideoCreatorOpen] = useState(false);
+  const [selectedSongForVideo, setSelectedSongForVideo] = useState(null);
+  const [localSongs, setLocalSongs] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('songcraft_history_songs') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  // Unified list of all creations (combining local storage & backend code history)
+  const allCreations = (() => {
+    const map = new Map();
+    localSongs.forEach((s) => { if (s?.id) map.set(s.id, s); });
+    myCodeSongs.forEach((s) => { if (s?.id) map.set(s.id, s); });
+    if (generatedSong?.id) map.set(generatedSong.id, generatedSong);
+    return Array.from(map.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  })();
 
   // Voice Assistant Modal
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
@@ -379,6 +401,16 @@ export default function UserView() {
       setGeneratedSong(data.song);
       localStorage.setItem('songcraft_active_song', JSON.stringify(data.song));
       
+      // Also save to all creations history
+      try {
+        const existing = JSON.parse(localStorage.getItem('songcraft_history_songs') || '[]');
+        const updated = [data.song, ...existing.filter((s) => s.id !== data.song.id)];
+        localStorage.setItem('songcraft_history_songs', JSON.stringify(updated));
+        setLocalSongs(updated);
+      } catch (e) {
+        console.warn("Could not save to history", e);
+      }
+
       // Refresh code validation & history
       validateCode(accessCode);
       
@@ -424,6 +456,18 @@ export default function UserView() {
         isOpen={isVoiceModalOpen}
         onClose={() => setIsVoiceModalOpen(false)}
         onApplyParsedData={handleApplyVoiceData}
+      />
+
+      {/* Access Code & Credits Status Bar right below the menu */}
+      <AccessCodeTopBar
+        accessCode={accessCode}
+        setAccessCode={setAccessCode}
+        codeInfo={codeInfo}
+        codeError={codeError}
+        isValidatingCode={isValidatingCode}
+        validateCode={validateCode}
+        createdSongsCount={allCreations.length}
+        onOpenHistory={() => setIsCreationsModalOpen(true)}
       />
 
       {/* ============================================================ */}
@@ -657,6 +701,10 @@ export default function UserView() {
               song={generatedSong}
               title={`Canción para ${generatedSong.names}`}
               subtitle={`Estilo: ${generatedSong.style} • Duración: ${generatedSong.duration}s`}
+              onOpenVideoCreator={(s) => {
+                setSelectedSongForVideo(s);
+                setIsSongVideoCreatorOpen(true);
+              }}
             />
 
             <div className="p-4 rounded-2xl bg-gray-950/60 border border-gray-800 text-xs text-gray-400 text-center">
@@ -1150,6 +1198,30 @@ export default function UserView() {
           </div>
         </div>
       </footer>
+
+      {/* User Creations Modal (Ver todas las canciones creadas) */}
+      <UserCreationsModal
+        isOpen={isCreationsModalOpen}
+        onClose={() => setIsCreationsModalOpen(false)}
+        songs={allCreations}
+        activeCode={accessCode}
+        onSelectSongForPlayer={(s) => {
+          setGeneratedSong(s);
+          localStorage.setItem('songcraft_active_song', JSON.stringify(s));
+          window.scrollTo({ top: 400, behavior: 'smooth' });
+        }}
+        onOpenVideoCreator={(s) => {
+          setSelectedSongForVideo(s);
+          setIsSongVideoCreatorOpen(true);
+        }}
+      />
+
+      {/* Vertical Video Creator with Remotion Modal */}
+      <SongVideoCreatorModal
+        isOpen={isSongVideoCreatorOpen}
+        onClose={() => setIsSongVideoCreatorOpen(false)}
+        song={selectedSongForVideo || generatedSong}
+      />
 
     </div>
   );
