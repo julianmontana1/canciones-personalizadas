@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   Check, Edit2, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
   Sparkles, Mic, Clock, Key, AlertTriangle, RefreshCw,
-  Play, Square, Mars, Venus, VenusAndMars, Shuffle
+  Play, Square, Mars, Venus, VenusAndMars, Shuffle, Wand2
 } from 'lucide-react';
 import Sparkle, { SparkleCluster } from './Sparkle';
 import { MOOD_FILTERS, filterByMood } from '../utils/moodFilters';
@@ -59,6 +59,46 @@ export default function SongWizard({
     if (genreSliderRef.current) {
       genreSliderRef.current.scrollTo({ left: 0, behavior: 'smooth' });
     }
+  };
+
+  // "Mejorar mi idea": enriches the story with narrative direction for the chosen
+  // genre. Keeps the previous text so the customer can undo it.
+  const [isEnhancingIdea, setIsEnhancingIdea] = useState(false);
+  const [storyBeforeEnhance, setStoryBeforeEnhance] = useState(null);
+  const [enhanceError, setEnhanceError] = useState('');
+
+  const handleEnhanceIdea = async () => {
+    if (isEnhancingIdea || !references.trim()) return;
+    setIsEnhancingIdea(true);
+    setEnhanceError('');
+
+    try {
+      const res = await fetch('/api/enhance-idea', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ story: references, style: customStyle || style })
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setEnhanceError(data.error || 'No se pudo mejorar la idea.');
+        return;
+      }
+      if (data.changed) {
+        setStoryBeforeEnhance(references);
+        setReferences(data.enhanced);
+      }
+    } catch (err) {
+      setEnhanceError('No se pudo conectar con el servidor.');
+    } finally {
+      setIsEnhancingIdea(false);
+    }
+  };
+
+  const handleUndoEnhance = () => {
+    if (storyBeforeEnhance === null) return;
+    setReferences(storyBeforeEnhance);
+    setStoryBeforeEnhance(null);
   };
 
   // Quick next step label
@@ -464,6 +504,41 @@ export default function SongWizard({
               className="w-full px-4 py-3 bg-[#0d1020] border border-gray-700/80 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all resize-none"
               autoFocus
             />
+
+            {/* Enhance idea */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleEnhanceIdea}
+                disabled={isEnhancingIdea || !references.trim()}
+                title={!references.trim() ? 'Escribe primero tu idea' : 'Añade dirección narrativa según el género elegido'}
+                className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/20 to-yellow-500/20 border border-amber-500/40 text-amber-200 hover:from-amber-500/30 hover:to-yellow-500/30 hover:text-amber-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Wand2 className={`w-3.5 h-3.5 ${isEnhancingIdea ? 'animate-spin' : ''}`} />
+                <span>{isEnhancingIdea ? 'Mejorando...' : 'Mejorar mi idea'}</span>
+              </button>
+
+              {storyBeforeEnhance !== null && (
+                <button
+                  type="button"
+                  onClick={handleUndoEnhance}
+                  className="text-[11px] text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
+                >
+                  Deshacer
+                </button>
+              )}
+
+              <span className="text-[11px] text-gray-500">
+                Le da forma de canción a tu idea según el género
+              </span>
+            </div>
+
+            {enhanceError && (
+              <p className="mt-1.5 text-[11px] text-rose-400 flex items-center gap-1.5">
+                <AlertTriangle className="w-3 h-3 flex-shrink-0" />
+                <span>{enhanceError}</span>
+              </p>
+            )}
 
             {/* Quick Inspiration Tags */}
             <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] text-gray-400">

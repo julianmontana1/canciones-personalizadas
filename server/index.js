@@ -12,6 +12,7 @@ import { execFile } from 'child_process';
 import { buildMusicPrompt } from './genreProfiles.js';
 import { composeMusic, ElevenLabsComposeError } from './elevenLabsMusic.js';
 import { containsOffensiveLanguage } from './contentFilter.js';
+import { enhanceIdea } from './ideaEnhancer.js';
 import { hashPassword, verifyPassword, generateRandomPassword } from './auth.js';
 
 dotenv.config();
@@ -154,6 +155,14 @@ const videoTranscodeLimiter = rateLimit({
   message: { error: 'Demasiadas solicitudes de video desde esta conexión. Intenta de nuevo más tarde.' }
 });
 
+const enhanceIdeaLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes. Espera un momento antes de volver a intentarlo.' }
+});
+
 // Helper: Extract client IP
 const getClientIp = (req) => {
   const forwarded = req.headers['x-forwarded-for'];
@@ -216,6 +225,25 @@ app.post('/api/admin/verify', adminLoginLimiter, (req, res) => {
     return res.json({ success: true });
   }
   return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
+});
+
+// Enrich the customer's short story into a song-ready brief for the chosen genre.
+// Pure text shaping — no AI call, no credits spent.
+app.post('/api/enhance-idea', enhanceIdeaLimiter, (req, res) => {
+  const { story, style } = req.body;
+
+  if (!story || !story.trim()) {
+    return res.status(400).json({ error: 'Escribe primero tu idea para poder mejorarla.' });
+  }
+  if (story.length > 3000 || (style && style.length > 100)) {
+    return res.status(400).json({ error: 'El texto enviado es demasiado largo.' });
+  }
+  if (containsOffensiveLanguage(story, style)) {
+    return res.status(400).json({ error: 'Tu descripción contiene lenguaje ofensivo o inapropiado.' });
+  }
+
+  const { enhanced, changed } = enhanceIdea({ story, style });
+  res.json({ enhanced, changed });
 });
 
 // Validate user access code
