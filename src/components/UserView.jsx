@@ -42,22 +42,27 @@ const PUBLIC_DEMO_META = {
 const GENRE_PRESETS = [
   // Niños & Dormir
   { id: 'dormir', category: 'kids', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙', image: '/images/genero-nana.avif' },
-  { id: 'infantil', category: 'kids', name: 'Música Infantil / Niños', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈', image: '/images/genero-infantil.avif' },
+  { id: 'infantil', category: 'kids', name: 'Fiesta Infantil', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈', image: '/images/genero-infantil.avif' },
+  { id: 'rondas', category: 'kids', name: 'Rondas Infantiles', desc: 'Cancioncitas de juego para cantar en grupo', icon: '🎠' },
 
   // Regional & Fiesta
   { id: 'banda', category: 'latin', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠', image: '/images/genero-banda.avif' },
   { id: 'salsa', category: 'latin', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃', image: '/images/genero-salsa.avif' },
+  { id: 'salsarosa', category: 'latin', name: 'Salsa Rosa', desc: 'Salsa romántica, suave y dedicada al amor', icon: '🌹' },
   { id: 'mariachi', category: 'latin', name: 'Mariachi Tradicional', desc: 'Trompetas mexicanas, violines y guitarrón', icon: '🎺', image: '/images/genero-mariachi.avif' },
+  { id: 'vallenato', category: 'latin', name: 'Vallenato', desc: 'Acordeón, caja y guacharaca contando una historia', icon: '🪗' },
   { id: 'cumbia', category: 'latin', name: 'Cumbia / Fiesta', desc: 'Sabor tropical, acordeón y ritmo bailable', icon: '🎉', image: '/images/genero-cumbia.avif' },
 
   // Populares & Románticos
   { id: 'balada', category: 'pop', name: 'Balada Romántica', desc: 'Emotiva, piano acústico y cuerdas', icon: '❤️', image: '/images/genero-balada.avif' },
+  { id: 'bolero', category: 'pop', name: 'Bolero', desc: 'Guitarra requinto y voz nostálgica de trío', icon: '🎻' },
   { id: 'pop', category: 'pop', name: 'Pop Latino Moderno', desc: 'Melódico, rítmico y pegadizo', icon: '✨', image: '/images/genero-pop.avif' },
   { id: 'acustico', category: 'pop', name: 'Acústico Íntimo', desc: 'Guitarra acústica de palo y voz cálida', icon: '🪕', image: '/images/genero-acustico.avif' },
 
   // Urbano & Energético
   { id: 'reggaeton', category: 'urban', name: 'Reggaetón / Urbano', desc: 'Beat bailable, dembow y ritmo moderno', icon: '🔥', image: '/images/genero-urbano.avif' },
-  { id: 'rock', category: 'urban', name: 'Rock / Pop Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸', image: '/images/genero-rock.avif' },
+  { id: 'reggae', category: 'urban', name: 'Reggae', desc: 'Ritmo relajado, bajo profundo y sabor caribeño', icon: '🌴' },
+  { id: 'rock', category: 'urban', name: 'Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸', image: '/images/genero-rock.avif' },
   { id: 'lofi', category: 'urban', name: 'Lo-Fi Chill Hop', desc: 'Relajado, nostálgico, estilo vinilo', icon: '☕', image: '/images/genero-lofi.avif' },
   { id: 'electronica', category: 'urban', name: 'Electrónica / EDM', desc: 'Sintetizadores enérgicos y fiesta total', icon: '⚡', image: '/images/genero-electronica.avif' },
 ];
@@ -1098,9 +1103,9 @@ export default function UserView() {
             <div>
               <div className="font-semibold text-white mb-3">Legal y Administración</div>
               <ul className="space-y-2 text-gray-400">
-                <li>Términos y condiciones</li>
-                <li>Política de privacidad</li>
-                <li>Licencia de uso musical</li>
+                <li><a href="#/terminos" className="hover:text-white transition-colors">Términos y condiciones</a></li>
+                <li><a href="#/privacidad" className="hover:text-white transition-colors">Política de privacidad</a></li>
+                <li><a href="#/reembolsos" className="hover:text-white transition-colors">Política de reembolsos</a></li>
                 <li><a href="#/admin" className="text-amber-400/80 hover:text-amber-300 transition-colors">🔐 Panel Superadmin</a></li>
               </ul>
             </div>

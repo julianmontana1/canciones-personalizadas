@@ -5,6 +5,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import { buildMusicPrompt } from './genreProfiles.js';
+import { composeMusic, ElevenLabsComposeError } from './elevenLabsMusic.js';
+import { containsOffensiveLanguage } from './contentFilter.js';
 
 dotenv.config();
 
@@ -223,6 +226,14 @@ app.post('/api/generate', async (req, res) => {
     });
   }
 
+  // 1.5 Content moderation — reject offensive language before spending any credits.
+  // Doesn't count against the code's song quota since nothing was generated.
+  if (containsOffensiveLanguage(names, references, style)) {
+    return res.status(400).json({
+      error: 'Tu descripción contiene lenguaje ofensivo o inapropiado. Por favor edítala y vuelve a intentarlo.'
+    });
+  }
+
   // 2. Fetch server API key from settings
   const settings = readJSON(SETTINGS_FILE, {});
   const activeApiKey = (settings.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY || '').trim();
@@ -239,7 +250,12 @@ app.post('/api/generate', async (req, res) => {
   const songNames = names || 'Para alguien especial';
   const songRefs = references || 'Celebrando momentos felices y recuerdos inolvidables';
 
-  const prompt = `A dynamic, high-fidelity ${songStyle} song dedicated to "${songNames}". Inspiration and lyrical context: ${songRefs}. Studio production, melodic hooks, emotional vocals and rhythm.`;
+  const prompt = buildMusicPrompt({
+    style: songStyle,
+    names: songNames,
+    references: songRefs,
+    durationSec
+  });
 
   let elevenlabsId = `el_${crypto.randomBytes(8).toString('hex')}`;
   let audioBuffer = null;
@@ -261,40 +277,20 @@ app.post('/api/generate', async (req, res) => {
       audioBuffer = Buffer.concat(chunks);
     } else {
       console.log(`[ELEVENLABS API] Requesting compose for Code: ${userCode.code} | IP: ${ip}`);
-      const elevenRes = await fetch('https://api.elevenlabs.io/v1/music/compose', {
-        method: 'POST',
-        headers: {
-          'xi-api-key': activeApiKey,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          prompt: prompt,
-          music_length_ms: durationSec * 1000,
-          model_id: 'music_v2'
-        })
+      const composeResult = await composeMusic({
+        apiKey: activeApiKey,
+        prompt,
+        durationSec,
+        logPrefix: `[Code: ${userCode.code}] `
       });
 
-      if (!elevenRes.ok) {
-        let errDetails = '';
-        try {
-          const errJson = await elevenRes.json();
-          errDetails = errJson.detail?.message || errJson.message || JSON.stringify(errJson);
-        } catch {
-          errDetails = await elevenRes.text();
-        }
-        console.error(`ElevenLabs API error (${elevenRes.status}):`, errDetails);
-        return res.status(elevenRes.status).json({
-          error: `Error de ElevenLabs (${elevenRes.status}): ${errDetails}`
-        });
+      audioBuffer = composeResult.audioBuffer;
+      if (composeResult.headerReqId) {
+        elevenlabsId = composeResult.headerReqId;
       }
-
-      const headerReqId = elevenRes.headers.get('request-id') || elevenRes.headers.get('x-request-id');
-      if (headerReqId) {
-        elevenlabsId = headerReqId;
+      if (composeResult.wasRewritten) {
+        console.log(`[ELEVENLABS API] Prompt reescrito automáticamente por contenido protegido para Code: ${userCode.code}`);
       }
-
-      const arrayBuffer = await elevenRes.arrayBuffer();
-      audioBuffer = Buffer.from(arrayBuffer);
     }
 
     // Save audio file
@@ -347,6 +343,10 @@ app.post('/api/generate', async (req, res) => {
     });
 
   } catch (error) {
+    if (error instanceof ElevenLabsComposeError) {
+      console.error(`Fallo al componer canción (Code: ${userCode.code}):`, error.details || error.message);
+      return res.status(error.status).json({ error: error.userMessage });
+    }
     console.error('Unexpected error generating song:', error);
     return res.status(500).json({
       error: 'Error interno del servidor al procesar la canción: ' + error.message
@@ -507,44 +507,29 @@ app.post('/api/admin/demo/generate', verifyAdmin, async (req, res) => {
   const songNames = names || 'Demo';
   const songRefs = references || '';
 
-  const prompt = `A dynamic, high-fidelity ${songStyle} song dedicated to "${songNames}". Inspiration and lyrical context: ${songRefs}. Studio production, melodic hooks, emotional vocals and rhythm.`;
+  const prompt = buildMusicPrompt({
+    style: songStyle,
+    names: songNames,
+    references: songRefs,
+    durationSec
+  });
 
   try {
     const quotaBefore = await fetchElevenLabsQuota(activeApiKey);
 
     console.log(`[ADMIN DEMO] Generating demo "${demoId}" | Style: ${songStyle} | Duration: ${durationSec}s`);
-    const elevenRes = await fetch('https://api.elevenlabs.io/v1/music/compose', {
-      method: 'POST',
-      headers: {
-        'xi-api-key': activeApiKey,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        prompt: prompt,
-        music_length_ms: durationSec * 1000,
-        model_id: 'music_v2'
-      })
+    const composeResult = await composeMusic({
+      apiKey: activeApiKey,
+      prompt,
+      durationSec,
+      logPrefix: `[Demo: ${demoId}] `
     });
 
-    if (!elevenRes.ok) {
-      let errDetails = '';
-      try {
-        const errJson = await elevenRes.json();
-        errDetails = errJson.detail?.message || errJson.message || JSON.stringify(errJson);
-      } catch {
-        errDetails = await elevenRes.text();
-      }
-      console.error(`ElevenLabs API error (${elevenRes.status}):`, errDetails);
-      return res.status(elevenRes.status).json({
-        error: `Error de ElevenLabs (${elevenRes.status}): ${errDetails}`
-      });
+    const audioBuffer = composeResult.audioBuffer;
+    const elevenlabsId = composeResult.headerReqId || `el_${crypto.randomBytes(8).toString('hex')}`;
+    if (composeResult.wasRewritten) {
+      console.log(`[ADMIN DEMO] Prompt reescrito automáticamente por contenido protegido para demo: ${demoId}`);
     }
-
-    const headerReqId = elevenRes.headers.get('request-id') || elevenRes.headers.get('x-request-id');
-    const elevenlabsId = headerReqId || `el_${crypto.randomBytes(8).toString('hex')}`;
-
-    const arrayBuffer = await elevenRes.arrayBuffer();
-    const audioBuffer = Buffer.from(arrayBuffer);
 
     fs.writeFileSync(filePath, audioBuffer);
     const stats = fs.statSync(filePath);
@@ -587,6 +572,10 @@ app.post('/api/admin/demo/generate', verifyAdmin, async (req, res) => {
       quotaAfter
     });
   } catch (error) {
+    if (error instanceof ElevenLabsComposeError) {
+      console.error(`Fallo al componer demo "${demoId}":`, error.details || error.message);
+      return res.status(error.status).json({ error: error.userMessage });
+    }
     console.error('Unexpected error generating demo song:', error);
     return res.status(500).json({
       error: 'Error interno del servidor al procesar la canción demo: ' + error.message

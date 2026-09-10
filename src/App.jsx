@@ -3,9 +3,23 @@ import Navbar from './components/Navbar';
 import UserView from './components/UserView';
 import AdminView from './components/AdminView';
 import AdminLoginModal from './components/AdminLoginModal';
+import TermsView from './components/TermsView';
+import RefundsView from './components/RefundsView';
+import PrivacyView from './components/PrivacyView';
+
+const LEGAL_VIEWS = {
+  '#/terminos': 'terms',
+  '#/reembolsos': 'refunds',
+  '#/privacidad': 'privacy'
+};
+
+const resolveViewFromHash = () => {
+  if (window.location.hash === '#/admin') return 'admin';
+  return LEGAL_VIEWS[window.location.hash] || 'user';
+};
 
 export default function App() {
-  const [currentView, setCurrentView] = useState(() => window.location.hash === '#/admin' ? 'admin' : 'user'); // 'user' | 'admin'
+  const [currentView, setCurrentView] = useState(() => resolveViewFromHash()); // 'user' | 'admin' | 'terms'
   const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem('el_admin_key') || '');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => window.location.hash === '#/admin' && !sessionStorage.getItem('el_admin_key'));
 
@@ -18,7 +32,7 @@ export default function App() {
           setCurrentView('admin');
         }
       } else {
-        setCurrentView('user');
+        setCurrentView(resolveViewFromHash());
       }
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -26,6 +40,12 @@ export default function App() {
   }, []);
 
   const isAdminAuthenticated = Boolean(adminKey);
+
+  // Legal pages (Términos/Reembolsos/Privacidad) all navigate between each other and
+  // back home purely through the hash — the hashchange listener above picks it up.
+  const navigateLegal = (hash) => {
+    window.location.hash = hash;
+  };
 
   const handleSelectView = (view) => {
     if (view === 'admin') {
@@ -65,9 +85,11 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {currentView === 'user' ? (
-          <UserView />
-        ) : (
+        {currentView === 'user' && <UserView />}
+        {currentView === 'terms' && <TermsView onNavigate={navigateLegal} />}
+        {currentView === 'refunds' && <RefundsView onNavigate={navigateLegal} />}
+        {currentView === 'privacy' && <PrivacyView onNavigate={navigateLegal} />}
+        {currentView === 'admin' && (
           <AdminView
             adminKey={adminKey}
             onLogout={handleAdminLogout}

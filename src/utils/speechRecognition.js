@@ -50,16 +50,24 @@ export const parseSpokenSongPrompt = (text) => {
 
   // 1. Detect genre (including kids, lullaby, salsa, mariachi, banda)
   const genrePatterns = [
-    { key: 'Música Infantil / Niños', match: ['infantil', 'niño', 'niña', 'niños', 'hijo', 'hija', 'juego', 'jugar', 'chiquito'] },
+    // Order matters: more specific phrases are checked before the generic
+    // patterns they could otherwise be swallowed by (e.g. "ronda" before
+    // "infantil", "reggaetón" before "reggae", "bolero" before "balada").
+    { key: 'Rondas Infantiles', match: ['ronda infantil', 'rondas infantiles', 'ronda', 'rondas', 'juego de niños', 'canción de juego'] },
+    { key: 'Fiesta Infantil', match: ['fiesta infantil', 'infantil', 'niño', 'niña', 'niños', 'hijo', 'hija', 'juego', 'jugar', 'chiquito'] },
     { key: 'Canción de Dormir / Nana', match: ['dormir', 'nana', 'arrullo', 'bebé', 'bebe', 'sueño', 'caja de música', 'lullaby'] },
+    { key: 'Vallenato', match: ['vallenato', 'caja vallenata', 'guacharaca', 'provinciano', 'parrandero'] },
+    { key: 'Salsa Rosa', match: ['salsa rosa', 'salsa romántica', 'salsa romantica', 'salsa lenta'] },
     { key: 'Salsa Brava / Caribeña', match: ['salsa', 'salsa brava', 'caribeña', 'timba', 'congas', 'guaguancó'] },
     { key: 'Mariachi Tradicional', match: ['mariachi', 'ranchera', 'mexicano', 'mexicana', 'ranchero', 'serenata'] },
     { key: 'Banda Sinaloense', match: ['banda', 'banda sinaloense', 'tambora', 'corrido', 'norteño', 'norteña'] },
     { key: 'Cumbia / Fiesta', match: ['cumbia', 'fiesta', 'tropical', 'bailable', 'acordeón'] },
+    { key: 'Bolero', match: ['bolero', 'trío romántico', 'trio romantico', 'requinto'] },
     { key: 'Balada Romántica', match: ['balada', 'romántica', 'romantica', 'amor', 'aniversario', 'enamorado'] },
     { key: 'Reggaetón / Urbano', match: ['reggaeton', 'reggaetón', 'urbano', 'perreo', 'dembow'] },
+    { key: 'Reggae', match: ['reggae', 'jamaiquino', 'ragga'] },
     { key: 'Pop Latino Moderno', match: ['pop', 'pop latino', 'pegadiza'] },
-    { key: 'Rock / Pop Rock', match: ['rock', 'guitarras', 'rock and roll'] },
+    { key: 'Rock', match: ['rock', 'guitarras', 'rock and roll'] },
     { key: 'Acústico Íntimo', match: ['acústico', 'acustico', 'guitarra acústica', 'guitarra acustica'] },
     { key: 'Lo-Fi Chill Hop', match: ['lofi', 'lo-fi', 'chill', 'relajante', 'suave'] },
     { key: 'Electrónica / EDM', match: ['electrónica', 'electronica', 'edm', 'dance', 'techno'] }

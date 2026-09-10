@@ -91,9 +91,13 @@ export default function Navbar({ currentView, onSelectView, isAdminAuthenticated
               Precios
             </button>
           </nav>
-        ) : (
+        ) : currentView === 'admin' ? (
           <div className="hidden sm:block text-xs text-gray-400 font-mono">
             Modo Superadministrador • Gestión de Códigos & Solicitudes
+          </div>
+        ) : (
+          <div className="hidden sm:block text-xs text-gray-400 font-mono">
+            Documento Legal
           </div>
         )}
 
