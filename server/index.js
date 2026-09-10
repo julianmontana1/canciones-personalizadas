@@ -183,7 +183,8 @@ app.get('/api/codes/my-songs', (req, res) => {
       audioUrl: s.audioUrl,
       filename: s.filename,
       timestamp: s.timestamp,
-      lyricsLines: s.lyricsLines || []
+      lyricsLines: s.lyricsLines || [],
+      voiceGender: s.voiceGender || 'cualquiera'
     }));
 
   res.json(mySongs);
@@ -258,7 +259,7 @@ app.post('/api/video/transcode', express.raw({ type: 'video/webm', limit: '200mb
 // Generate song endpoint
 app.post('/api/generate', async (req, res) => {
   const ip = getClientIp(req);
-  const { code, names, references, style, duration, simulate } = req.body;
+  const { code, names, references, style, duration, simulate, voiceGender } = req.body;
 
   // 1. Verify access code
   const codeParam = (code || '').trim().toUpperCase();
@@ -303,12 +304,15 @@ app.post('/api/generate', async (req, res) => {
   const songStyle = style || 'Pop acústico';
   const songNames = names || 'Para alguien especial';
   const songRefs = references || 'Celebrando momentos felices y recuerdos inolvidables';
+  const VALID_VOICE_GENDERS = ['masculina', 'femenina', 'ambas'];
+  const songVoiceGender = VALID_VOICE_GENDERS.includes(voiceGender) ? voiceGender : 'cualquiera';
 
   const prompt = buildMusicPrompt({
     style: songStyle,
     names: songNames,
     references: songRefs,
-    durationSec
+    durationSec,
+    voiceGender: songVoiceGender
   });
 
   let elevenlabsId = `el_${crypto.randomBytes(8).toString('hex')}`;
@@ -375,7 +379,8 @@ app.post('/api/generate', async (req, res) => {
       audioUrl: `/api/storage/songs/${filename}`,
       prompt: prompt,
       isSimulated: isDemo,
-      lyricsLines: lyricsLines
+      lyricsLines: lyricsLines,
+      voiceGender: songVoiceGender
     };
 
     const history = readJSON(HISTORY_FILE, []);
@@ -397,7 +402,8 @@ app.post('/api/generate', async (req, res) => {
         duration: durationSec,
         audioUrl: `/api/storage/songs/${filename}`,
         filename: filename,
-        lyricsLines: lyricsLines
+        lyricsLines: lyricsLines,
+        voiceGender: songVoiceGender
       }
     });
 

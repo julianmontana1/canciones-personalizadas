@@ -54,6 +54,10 @@ export const parseSpokenSongPrompt = (text) => {
     // patterns they could otherwise be swallowed by (e.g. "ronda" before
     // "infantil", "reggaetón" before "reggae", "bolero" before "balada").
     { key: 'Rondas Infantiles', match: ['ronda infantil', 'rondas infantiles', 'ronda', 'rondas', 'juego de niños', 'canción de juego'] },
+    { key: 'Cumpleaños Infantil', match: ['cumpleaños infantil', 'cumple infantil', 'fiesta de cumpleaños infantil'] },
+    { key: 'Cumpleaños', match: ['cumpleaños', 'cumple', 'feliz cumpleaños'] },
+    { key: 'Infantil Clásica', match: ['infantil clásica', 'infantil clasica', 'clásica infantil', 'clasica infantil', 'vaca lola', 'pin pón', 'pin pon'] },
+    { key: 'Infantil Moderna', match: ['infantil moderna', 'moderna infantil', 'pop infantil'] },
     { key: 'Fiesta Infantil', match: ['fiesta infantil', 'infantil', 'niño', 'niña', 'niños', 'hijo', 'hija', 'juego', 'jugar', 'chiquito'] },
     { key: 'Canción de Dormir / Nana', match: ['dormir', 'nana', 'arrullo', 'bebé', 'bebe', 'sueño', 'caja de música', 'lullaby'] },
     { key: 'Vallenato', match: ['vallenato', 'caja vallenata', 'guacharaca', 'provinciano', 'parrandero'] },

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Music, Download, Play, Pause, Video, Sparkles, Clock, Calendar, Search, RefreshCw, FileText } from 'lucide-react';
 import Sparkle from './Sparkle';
+import { buildSongFilename } from '../utils/filenameBuilder';
 
 export default function UserCreationsModal({
   isOpen,
@@ -58,7 +59,7 @@ export default function UserCreationsModal({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = song.filename || `cancion_${song.names?.replace(/\s+/g, '_') || 'personalizada'}.mp3`;
+      link.download = buildSongFilename(song);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

@@ -48,10 +48,14 @@ const PUBLIC_DEMO_META = {
 const GENRE_PRESETS = [
   // Niños & Dormir
   { id: 'dormir', mood: 'infantil', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙', image: '/images/genero-nana.avif' },
-  { id: 'infantil', mood: 'infantil', name: 'Fiesta Infantil', desc: 'Divertida, rítmica y alegre para jugar', icon: '🎈', image: '/images/genero-infantil.avif' },
+  { id: 'infantil', mood: 'infantil', name: 'Fiesta Infantil', desc: 'Movida y bailable, para saltar y bailar', icon: '🎈', image: '/images/genero-infantil.avif' },
+  { id: 'cumpleanosinfantil', mood: 'infantil', name: 'Cumpleaños Infantil', desc: 'Fiesta de cumpleaños con globos y torta', icon: '🎂' },
+  { id: 'infantilclasica', mood: 'infantil', name: 'Infantil Clásica', desc: 'Estilo clásico de toda la vida, tierno y educativo', icon: '📺' },
+  { id: 'infantilmoderna', mood: 'infantil', name: 'Infantil Moderna', desc: 'Ritmo actual y pegajoso, apto para niños', icon: '🌟' },
   { id: 'rondas', mood: 'infantil', name: 'Rondas Infantiles', desc: 'Cancioncitas de juego para cantar en grupo', icon: '🎠', image: '/images/genero-rondas.avif' },
 
   // Regional & Fiesta
+  { id: 'cumpleanos', mood: 'celebracion', name: 'Cumpleaños', desc: 'Festiva y alegre, para celebrar en grande', icon: '🥳' },
   { id: 'banda', mood: 'celebracion', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠', image: '/images/genero-banda.avif' },
   { id: 'salsa', mood: 'celebracion', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃', image: '/images/genero-salsa.avif' },
   { id: 'salsarosa', mood: 'amor', name: 'Salsa Rosa', desc: 'Salsa romántica, suave y dedicada al amor', icon: '🌹', image: '/images/genero-salsarosa.avif' },
@@ -97,6 +101,7 @@ export default function UserView() {
   const [style, setStyle] = useState('Balada Romántica');
   const [customStyle, setCustomStyle] = useState('');
   const [duration, setDuration] = useState(60);
+  const [voiceGender, setVoiceGender] = useState('cualquiera');
 
   // States
   const [isGenerating, setIsGenerating] = useState(false);
@@ -388,7 +393,8 @@ export default function UserView() {
           names: names.trim(),
           references: references.trim(),
           style: chosenStyle,
-          duration: duration
+          duration: duration,
+          voiceGender: voiceGender
         })
       });
 
@@ -429,7 +435,23 @@ export default function UserView() {
     localStorage.removeItem('songcraft_active_song');
     setNames('');
     setReferences('');
+    setVoiceGender('cualquiera');
     setError('');
+  };
+
+  // Reuses the dedication + story from a previously created song so the customer
+  // can generate a new one in a different genre/duration without retyping everything.
+  const handleCreateFromSong = (song) => {
+    setGeneratedSong(null);
+    localStorage.removeItem('songcraft_active_song');
+    setNames(song?.names || '');
+    setReferences(song?.references || '');
+    setStyle(song?.style || 'Balada Romántica');
+    setCustomStyle('');
+    setDuration(song?.duration || 60);
+    setVoiceGender(song?.voiceGender || 'cualquiera');
+    setError('');
+    window.scrollTo({ top: 400, behavior: 'smooth' });
   };
 
   const scrollToWizard = () => {
@@ -682,19 +704,30 @@ export default function UserView() {
         {/* If song is already generated */}
         {generatedSong ? (
           <div className="space-y-6 animate-fadeIn">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
-                <CheckCircle2 className="w-5 h-5" />
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0" />
                 <span>¡Tu canción personalizada está lista para escuchar y descargar!</span>
               </div>
-              <button
-                type="button"
-                onClick={handleResetForNewSong}
-                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Crear otra canción</span>
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleCreateFromSong(generatedSong)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-300 hover:text-purple-200 text-xs font-semibold transition-all"
+                  title="Reutiliza los mismos nombres e historia para crear una nueva canción en otro género o duración"
+                >
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>Crear a partir de esta</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetForNewSong}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-200 text-xs font-semibold transition-all"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Crear otra canción</span>
+                </button>
+              </div>
             </div>
 
             <SongPlayer
@@ -723,6 +756,8 @@ export default function UserView() {
             setCustomStyle={setCustomStyle}
             duration={duration}
             setDuration={setDuration}
+            voiceGender={voiceGender}
+            setVoiceGender={setVoiceGender}
             accessCode={accessCode}
             setAccessCode={setAccessCode}
             codeInfo={codeInfo}

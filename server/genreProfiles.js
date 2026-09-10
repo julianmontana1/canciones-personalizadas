@@ -15,14 +15,47 @@ const GENRE_PROFILES = {
   },
 
   infantil: {
-    label: "cheerful children's birthday party song (fiesta infantil)",
-    aliases: ['fiesta infantil', 'musica infantil', 'infantil', 'cumpleanos infantil', 'ninos', 'ninas', 'kids', 'children'],
-    instruments: 'bouncy glockenspiel and xylophone melodies, strummed ukulele, playful piano, handclaps, party whistles, kazoo and light shakers',
-    tempo: 'happy, bouncy party tempo around 118 BPM in a bright major key',
-    vocals: 'cheerful, clear and friendly lead voice singing simple phrases a child can follow, full of party energy',
-    backing: "a children's choir singing and shouting along enthusiastically on every chorus, like a birthday party sing-along",
-    production: 'bright, clean and playful mix with everything clear and up-front, festive birthday-party atmosphere',
+    label: 'energetic children\'s dance-along song, made for jumping and dancing',
+    aliases: ['fiesta infantil', 'musica infantil', 'infantil bailable', 'infantil', 'ninos', 'ninas', 'kids', 'children'],
+    instruments: 'bouncy glockenspiel and xylophone melodies, strummed ukulele, playful synth plucks, handclaps, whistles and light shakers',
+    tempo: 'very energetic, bouncy dance tempo around 128 BPM in a bright major key, built to make kids jump and move',
+    vocals: 'cheerful, clear and highly rhythmic lead voice singing short, catchy, easy-to-repeat phrases a child can chant and dance along to',
+    backing: "a children's choir enthusiastically echoing and repeating each catchy phrase, call-and-response style, like a viral kids dance song",
+    production: 'bright, clean, punchy and highly repetitive/chantable, everything clear and up-front, designed to get kids up and jumping',
+    avoid: 'dark or melancholic mood, distortion, aggressive drums, complex harmony, slow tempo, birthday-party references'
+  },
+
+  cumpleanosInfantil: {
+    label: "children's birthday party song (cumpleaños infantil)",
+    aliases: ['cumpleanos infantil', 'cumple infantil', 'fiesta de cumpleanos infantil'],
+    instruments: 'bouncy glockenspiel, playful piano, ukulele, party whistles, kazoo, handclaps and light festive percussion',
+    tempo: 'happy, bouncy birthday-party tempo around 118 BPM in a bright major key',
+    vocals: 'cheerful, warm lead voice full of birthday-party energy, inviting the birthday child to dance and blow out the candles',
+    backing: "a children's choir singing and shouting along enthusiastically, birthday-party sing-along atmosphere",
+    production: 'bright, clean, playful and festive, balloons-and-cake birthday-party atmosphere',
     avoid: 'dark or melancholic mood, distortion, aggressive drums, complex harmony'
+  },
+
+  infantilClasica: {
+    label: "classic traditional children's sing-along song",
+    aliases: ['infantil clasica', 'clasica infantil', 'cancion infantil clasica', 'vaca lola', 'pin pon'],
+    instruments: 'simple acoustic guitar or piano, gentle orchestral strings, soft xylophone and light hand percussion, warm and simple like a classic children\'s television song',
+    tempo: 'gentle, moderate sing-along tempo around 100 BPM, simple and easy to follow',
+    vocals: 'warm, friendly, clearly-enunciated lead voice with a classic educational children\'s-show quality, simple and repetitive melody',
+    backing: "a small children's choir joining in on repeated, easy-to-memorize phrases",
+    production: 'warm, simple, nostalgic classic children\'s-program production, clean and gentle',
+    avoid: 'aggressive drums, EDM synths, dark mood, complex modern production, distortion'
+  },
+
+  infantilModerna: {
+    label: 'modern kid-friendly pop song',
+    aliases: ['infantil moderna', 'moderna infantil', 'pop infantil'],
+    instruments: 'bright modern pop synths, clean plucked guitars, punchy but kid-friendly programmed drums, light claps and a playful bass',
+    tempo: 'upbeat modern pop tempo around 110 BPM, current and radio-friendly but clean',
+    vocals: 'youthful, bright, clearly-enunciated lead voice with a modern pop feel, fully appropriate and clean for children',
+    backing: 'stacked youthful vocal harmonies on the chorus, fun and catchy',
+    production: 'glossy modern pop production, but kid-appropriate: no innuendo, no dark themes, clean and colorful',
+    avoid: 'explicit or mature themes, heavy distortion, dark mood, overly complex harmony'
   },
 
   rondas: {
@@ -89,6 +122,17 @@ const GENRE_PROFILES = {
     backing: 'lively group coros singing along on the chorus, party atmosphere',
     production: 'bright tropical mix with percussion forward and warm analog character',
     avoid: 'distorted guitars, EDM drops, heavy trap drums, melancholic mood'
+  },
+
+  cumpleanos: {
+    label: 'festive birthday celebration song (cumpleaños)',
+    aliases: ['cumpleanos', 'feliz cumpleanos', 'cumple'],
+    instruments: 'lively acoustic and electric guitars, festive percussion, bright horns or synth stabs, handclaps and a singable celebratory melodic hook',
+    tempo: 'upbeat celebratory tempo around 120 BPM, danceable and joyful',
+    vocals: 'warm, joyful lead voice full of celebration energy, inviting everyone to sing along',
+    backing: 'a full group of friends and family singing along on the chorus, party atmosphere with shouted cheers',
+    production: 'bright, festive party production, warm and full, radio-ready',
+    avoid: 'somber mood, minimalism, slow ballad tempo'
   },
 
   salsaRosa: {
@@ -377,11 +421,22 @@ const structureFor = (durationSec) => {
   return 'intro, verse 1, pre-chorus, chorus, verse 2, chorus, instrumental bridge, final chorus with added vocal harmonies, resolved outro';
 };
 
-export const buildMusicPrompt = ({ style, names, references, durationSec }) => {
+// Overrides the genre profile's default vocal gender when the customer picked one
+// explicitly. Appended as an explicit directive rather than rewriting profile.vocals
+// text (which is often gendered inline, e.g. "maternal female voice") so it reliably
+// takes precedence regardless of how each profile happens to be worded.
+const VOICE_GENDER_OVERRIDES = {
+  masculina: 'Regardless of any other vocal description, the lead vocal must be sung by a male voice.',
+  femenina: 'Regardless of any other vocal description, the lead vocal must be sung by a female voice.',
+  ambas: 'This song must feature both a male and a female voice, for example alternating verses or singing together as a duet.'
+};
+
+export const buildMusicPrompt = ({ style, names, references, durationSec, voiceGender }) => {
   const profile = resolveGenreProfile(style);
   const modifiers = detectModifiers(style);
   const dedication = (names || '').trim() || 'someone special';
   const story = (references || '').trim();
+  const voiceOverride = VOICE_GENDER_OVERRIDES[voiceGender] || '';
 
   return [
     `A high-quality, professionally produced ${profile.label}, ${durationSec} seconds long.`,
@@ -391,6 +446,7 @@ export const buildMusicPrompt = ({ style, names, references, durationSec }) => {
     `Backing vocals: ${profile.backing}.`,
     `Structure: ${structureFor(durationSec)}.`,
     ...modifiers,
+    voiceOverride,
     `The lyrics must be performed entirely in natural Latin American Spanish with a neutral Colombian accent, never in English.`,
     `This is a personalized gift song. The dedication, written by the customer, is: "${dedication}".`,
     story ? `Weave these personal details naturally into the verses: ${story}.` : '',

@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import {
   Check, Edit2, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
   Sparkles, Mic, Clock, Key, AlertTriangle, RefreshCw,
-  Play, Square
+  Play, Square, Mars, Venus, VenusAndMars, Shuffle
 } from 'lucide-react';
 import Sparkle, { SparkleCluster } from './Sparkle';
 import { MOOD_FILTERS, filterByMood } from '../utils/moodFilters';
@@ -18,6 +18,8 @@ export default function SongWizard({
   setCustomStyle,
   duration,
   setDuration,
+  voiceGender,
+  setVoiceGender,
   accessCode,
   setAccessCode,
   codeInfo,
@@ -553,6 +555,40 @@ export default function SongWizard({
                     {preset.label}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            {/* Voice gender selector */}
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-gray-300 flex items-center gap-2 mb-2">
+                <VenusAndMars className="w-4 h-4 text-pink-400" />
+                <span>Voz de la Canción</span>
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { value: 'masculina', label: 'Masculina', icon: Mars },
+                  { value: 'femenina', label: 'Femenina', icon: Venus },
+                  { value: 'ambas', label: 'Ambas voces', icon: VenusAndMars },
+                  { value: 'cualquiera', label: 'Cualquiera', icon: Shuffle }
+                ].map((option) => {
+                  const OptionIcon = option.icon;
+                  const isSelected = voiceGender === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setVoiceGender(option.value)}
+                      className={`py-2 px-2 rounded-xl text-xs font-semibold border transition-all flex items-center justify-center gap-1.5 ${
+                        isSelected
+                          ? 'bg-pink-500/25 border-pink-400 text-pink-200 shadow-md shadow-pink-900/30'
+                          : 'bg-gray-900/80 border-gray-800 text-gray-400 hover:text-white hover:border-gray-700'
+                      }`}
+                    >
+                      <OptionIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span>{option.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 

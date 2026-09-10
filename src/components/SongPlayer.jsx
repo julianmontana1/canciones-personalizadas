@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Download, Volume2, VolumeX, Sparkles, Music, CheckCircle2, Video } from 'lucide-react';
+import { Play, Pause, Download, Volume2, VolumeX, Sparkles, Music, CheckCircle2, Video, FileText, Calendar, Clock, Mars, Venus, VenusAndMars } from 'lucide-react';
+import { buildSongFilename } from '../utils/filenameBuilder';
 
 export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }) {
   const audioRef = useRef(null);
@@ -66,13 +67,14 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
 
   const handleDownload = async (e) => {
     if (e) e.preventDefault();
+    const filename = buildSongFilename(song);
     try {
       const res = await fetch(audioSrc);
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = song.filename || `cancion_${song.names?.replace(/\s+/g, '_') || 'personalizada'}.mp3`;
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -82,7 +84,7 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
       console.warn("Direct blob download fallback", err);
       const link = document.createElement('a');
       link.href = audioSrc;
-      link.download = song.filename || 'cancion.mp3';
+      link.download = filename;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -147,6 +149,47 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
             <span className="hidden sm:inline">{downloaded ? '¡Descargado!' : 'Descargar MP3'}</span>
           </button>
         </div>
+
+        {/* Original Prompt / Details Block */}
+        {(song?.references || song?.duration) && (
+          <div className="p-4 rounded-2xl bg-gray-950/60 border border-gray-800/80 space-y-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-purple-300">
+              <FileText className="w-3.5 h-3.5" />
+              <span>Detalles que usaste para crear esta canción</span>
+            </div>
+
+            {song?.references && (
+              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+                "{song.references}"
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-gray-500 pt-1 border-t border-gray-800/60">
+              <span className="flex items-center gap-1">
+                <Music className="w-3 h-3 text-purple-400" />
+                {song?.style || 'Estilo no especificado'}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3 text-teal-400" />
+                {song?.duration}s
+              </span>
+              {song?.timestamp && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3 h-3 text-pink-400" />
+                  {new Date(song.timestamp).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </span>
+              )}
+              {song?.voiceGender && song.voiceGender !== 'cualquiera' && (
+                <span className="flex items-center gap-1">
+                  {song.voiceGender === 'masculina' && <Mars className="w-3 h-3 text-sky-400" />}
+                  {song.voiceGender === 'femenina' && <Venus className="w-3 h-3 text-rose-400" />}
+                  {song.voiceGender === 'ambas' && <VenusAndMars className="w-3 h-3 text-purple-400" />}
+                  {song.voiceGender === 'masculina' ? 'Voz masculina' : song.voiceGender === 'femenina' ? 'Voz femenina' : 'Ambas voces'}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Animated Waveform */}
         <div className="bg-gray-950/60 rounded-2xl p-4 border border-gray-800/80 flex items-center justify-center gap-1.5 h-20 overflow-hidden">
