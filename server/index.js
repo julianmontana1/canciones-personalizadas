@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +12,7 @@ import { execFile } from 'child_process';
 import { buildMusicPrompt } from './genreProfiles.js';
 import { composeMusic, ElevenLabsComposeError } from './elevenLabsMusic.js';
 import { containsOffensiveLanguage } from './contentFilter.js';
+import { hashPassword, verifyPassword, generateRandomPassword } from './auth.js';
 
 dotenv.config();
 
@@ -41,12 +44,31 @@ if (!fs.existsSync(CODES_FILE)) {
   fs.writeFileSync(CODES_FILE, JSON.stringify(defaultCodes, null, 2), 'utf-8');
 }
 
-// Default settings if not exists
+// Default settings if not exists. No hardcoded default password: a fresh install
+// generates a random one and prints it once so it's never a publicly-known value
+// baked into the repo (a real backdoor an earlier version of this file had).
 if (!fs.existsSync(SETTINGS_FILE)) {
+  const initialPassword = process.env.ADMIN_PASSWORD || generateRandomPassword();
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify({
     elevenlabsApiKey: process.env.ELEVENLABS_API_KEY || '',
-    adminPassword: process.env.ADMIN_PASSWORD || 'admin123'
+    adminPasswordHash: hashPassword(initialPassword)
   }, null, 2), 'utf-8');
+  console.log('◆ Contraseña de Superadmin generada para este servidor:', initialPassword);
+  console.log('◆ Guárdala ahora — no se volverá a mostrar. Cámbiala luego desde el panel de Configuración.');
+} else {
+  // Migration: an earlier version stored the admin password in plain text as
+  // `adminPassword` (and used the public default "admin123"). Rotate it to a fresh
+  // random password, hashed, the first time this runs against an old settings file.
+  const existingSettings = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+  if (!existingSettings.adminPasswordHash) {
+    const rotatedPassword = generateRandomPassword();
+    existingSettings.adminPasswordHash = hashPassword(rotatedPassword);
+    delete existingSettings.adminPassword;
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(existingSettings, null, 2), 'utf-8');
+    console.log('◆ Se detectó una contraseña de Superadmin antigua en texto plano y fue rotada.');
+    console.log('◆ Nueva contraseña de Superadmin:', rotatedPassword);
+    console.log('◆ Guárdala ahora — no se volverá a mostrar. Cámbiala luego desde el panel de Configuración.');
+  }
 }
 
 // Helper: JSON read/write
@@ -68,8 +90,69 @@ const writeJSON = (file, data) => {
 };
 
 // Middlewares
-app.use(cors());
+const ALLOWED_ORIGINS = [
+  'https://canciones.montanadev.space',
+  'http://localhost:3001',
+  'http://localhost:5173'
+];
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // React inline styles and gradients rely on the style attribute.
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      imgSrc: ["'self'", 'data:', 'https://www.googletagmanager.com'],
+      // Google Analytics (gtag.js), added directly in index.html.
+      // The exact SHA-256 hash below allowlists only the inline gtag() init
+      // snippet in index.html — if that snippet's content ever changes, this
+      // hash must be regenerated (the browser console reports the new one).
+      scriptSrc: ["'self'", 'https://www.googletagmanager.com', "'sha256-gk/8XBYnqy71IAfKgGs5mpj3ERha9FKTniimGXMlFXM='"],
+      connectSrc: ["'self'", 'https://www.google-analytics.com', 'https://*.google-analytics.com', 'https://*.analytics.google.com'],
+      mediaSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"]
+    }
+  }
+}));
+app.use(cors({ origin: ALLOWED_ORIGINS }));
 app.use(express.json());
+
+// Rate limiting — brute-force and abuse protection on the endpoints that matter most:
+// admin login (password guessing), access-code lookup (code enumeration), song
+// generation and video transcoding (both spend real resources per request).
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 8,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.' }
+});
+
+const codeValidateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Espera unos minutos antes de volver a intentarlo.' }
+});
+
+const generateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes de generación desde esta conexión. Intenta de nuevo más tarde.' }
+});
+
+const videoTranscodeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiadas solicitudes de video desde esta conexión. Intenta de nuevo más tarde.' }
+});
 
 // Helper: Extract client IP
 const getClientIp = (req) => {
@@ -86,9 +169,9 @@ const getClientIp = (req) => {
 
 // Middleware to verify Superadmin
 const verifyAdmin = (req, res, next) => {
-  const settings = readJSON(SETTINGS_FILE, { adminPassword: 'admin123' });
+  const settings = readJSON(SETTINGS_FILE, {});
   const adminKey = req.headers['x-admin-key'];
-  if (!adminKey || adminKey !== settings.adminPassword) {
+  if (!adminKey || !verifyPassword(adminKey, settings.adminPasswordHash)) {
     return res.status(401).json({ error: 'Acceso no autorizado. Clave de Superadmin inválida.' });
   }
   next();
@@ -126,17 +209,17 @@ app.get('/api/health', (req, res) => {
 });
 
 // Admin verify key
-app.post('/api/admin/verify', (req, res) => {
+app.post('/api/admin/verify', adminLoginLimiter, (req, res) => {
   const { password } = req.body;
-  const settings = readJSON(SETTINGS_FILE, { adminPassword: 'admin123' });
-  if (password === settings.adminPassword) {
+  const settings = readJSON(SETTINGS_FILE, {});
+  if (verifyPassword(password, settings.adminPasswordHash)) {
     return res.json({ success: true });
   }
   return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
 });
 
 // Validate user access code
-app.get('/api/codes/validate', (req, res) => {
+app.get('/api/codes/validate', codeValidateLimiter, (req, res) => {
   const codeParam = (req.query.code || '').trim().toUpperCase();
   if (!codeParam) {
     return res.status(400).json({ valid: false, error: 'Debes proporcionar un código de acceso.' });
@@ -212,7 +295,18 @@ app.get('/api/storage/songs/:filename', (req, res) => {
 const VIDEO_TMP_DIR = path.join(os.tmpdir(), 'serenatia-video-export');
 if (!fs.existsSync(VIDEO_TMP_DIR)) fs.mkdirSync(VIDEO_TMP_DIR, { recursive: true });
 
-app.post('/api/video/transcode', express.raw({ type: 'video/webm', limit: '200mb' }), (req, res) => {
+app.post('/api/video/transcode', videoTranscodeLimiter, express.raw({ type: 'video/webm', limit: '60mb' }), (req, res) => {
+  // Require a real access code so this CPU-heavy endpoint isn't wide open to anyone
+  // on the internet — doesn't need remaining song quota, just proof of being a real user.
+  const codeParam = (req.query.code || '').toString().trim().toUpperCase();
+  if (!codeParam) {
+    return res.status(401).json({ error: 'Se requiere un código de acceso válido.' });
+  }
+  const codes = readJSON(CODES_FILE, []);
+  if (!codes.some((c) => c.code.toUpperCase() === codeParam)) {
+    return res.status(401).json({ error: 'Código de acceso no válido.' });
+  }
+
   if (!req.body || !req.body.length) {
     return res.status(400).json({ error: 'No se recibió ningún video para convertir.' });
   }
@@ -257,14 +351,21 @@ app.post('/api/video/transcode', express.raw({ type: 'video/webm', limit: '200mb
 });
 
 // Generate song endpoint
-app.post('/api/generate', async (req, res) => {
+app.post('/api/generate', generateLimiter, async (req, res) => {
   const ip = getClientIp(req);
-  const { code, names, references, style, duration, simulate, voiceGender } = req.body;
+  // `simulate` is intentionally NOT read from the request body — it used to let any
+  // caller bypass real generation from the public endpoint. Admin testing without
+  // spending a customer's quota already has its own gated route (/api/admin/demo/generate).
+  const { code, names, references, style, duration, voiceGender } = req.body;
 
   // 1. Verify access code
   const codeParam = (code || '').trim().toUpperCase();
   if (!codeParam) {
     return res.status(400).json({ error: 'Se requiere un código de acceso para generar canciones.' });
+  }
+
+  if ((names && names.length > 200) || (references && references.length > 3000) || (style && style.length > 100)) {
+    return res.status(400).json({ error: 'Uno de los campos enviados es demasiado largo.' });
   }
 
   const codes = readJSON(CODES_FILE, []);
@@ -294,7 +395,7 @@ app.post('/api/generate', async (req, res) => {
   const activeApiKey = (settings.elevenlabsApiKey || process.env.ELEVENLABS_API_KEY || '').trim();
 
   // Allow simulate mode if activeApiKey is missing or requested
-  const isDemo = Boolean(simulate || !activeApiKey);
+  const isDemo = !activeApiKey;
 
   const durationSec = Math.max(10, Math.min(parseInt(duration, 10) || 30, 300));
   const songId = 'song_' + crypto.randomBytes(6).toString('hex');
@@ -459,27 +560,29 @@ app.delete('/api/admin/history/:id', verifyAdmin, (req, res) => {
 
 // Get settings
 app.get('/api/admin/settings', verifyAdmin, (req, res) => {
-  const settings = readJSON(SETTINGS_FILE, { elevenlabsApiKey: '', adminPassword: 'admin123' });
+  const settings = readJSON(SETTINGS_FILE, {});
   const rawKey = settings.elevenlabsApiKey || '';
   const maskedKey = rawKey ? `${rawKey.slice(0, 6)}...${rawKey.slice(-4)}` : '';
 
   res.json({
     hasKey: Boolean(rawKey),
     maskedKey: maskedKey,
-    hasPassword: Boolean(settings.adminPassword)
+    hasPassword: Boolean(settings.adminPasswordHash)
   });
 });
 
 // Update settings
 app.post('/api/admin/settings', verifyAdmin, (req, res) => {
   const { elevenlabsApiKey, newAdminPassword } = req.body;
-  const settings = readJSON(SETTINGS_FILE, { elevenlabsApiKey: '', adminPassword: 'admin123' });
+  const settings = readJSON(SETTINGS_FILE, {});
 
   if (elevenlabsApiKey !== undefined) {
     settings.elevenlabsApiKey = elevenlabsApiKey.trim();
   }
-  if (newAdminPassword && newAdminPassword.trim().length >= 4) {
-    settings.adminPassword = newAdminPassword.trim();
+  if (newAdminPassword && newAdminPassword.trim().length >= 8) {
+    settings.adminPasswordHash = hashPassword(newAdminPassword.trim());
+  } else if (newAdminPassword) {
+    return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres.' });
   }
 
   writeJSON(SETTINGS_FILE, settings);

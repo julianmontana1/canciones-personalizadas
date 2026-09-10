@@ -8,7 +8,8 @@ import { generateSongLyrics } from '../utils/lyricsGenerator';
 export default function SongVideoCreatorModal({
   isOpen,
   onClose,
-  song
+  song,
+  accessCode
 }) {
   // State for user photos (up to 5)
   const [photos, setPhotos] = useState([
@@ -129,7 +130,7 @@ export default function SongVideoCreatorModal({
         // record WebM and ask the server to transcode it to MP4 with ffmpeg.
         setExportPhase('converting');
         try {
-          const transcodeRes = await fetch('/api/video/transcode', {
+          const transcodeRes = await fetch(`/api/video/transcode?code=${encodeURIComponent(accessCode || '')}`, {
             method: 'POST',
             headers: { 'Content-Type': 'video/webm' },
             body: webmBlob

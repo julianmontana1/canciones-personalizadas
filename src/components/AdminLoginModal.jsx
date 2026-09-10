@@ -28,12 +28,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }) {
         setError(data.error || 'Contraseña incorrecta');
       }
     } catch (err) {
-      // Fallback if direct check
-      if (password === 'admin123') {
-        onSuccess(password);
-      } else {
-        setError('Error al verificar credenciales con el servidor');
-      }
+      setError('Error al verificar credenciales con el servidor');
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +79,7 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }) {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Ingresa la clave (por defecto: admin123)"
+                placeholder="Ingresa tu clave de administrador"
                 className="w-full pl-10 pr-10 py-2.5 bg-gray-900/90 border border-gray-700/80 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all"
                 autoFocus
                 required
@@ -97,9 +92,6 @@ export default function AdminLoginModal({ isOpen, onClose, onSuccess }) {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            <p className="text-[11px] text-gray-500 mt-1">
-              Clave predeterminada configurada en el servidor: <code className="text-amber-400/80 font-mono">admin123</code>
-            </p>
           </div>
 
           <div className="pt-2 flex gap-3">

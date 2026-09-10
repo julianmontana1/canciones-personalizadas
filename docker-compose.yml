@@ -4,10 +4,12 @@ services:
     container_name: songcraft-ai
     restart: unless-stopped
     ports:
-      - "3001:3001"
+      # Bound to localhost only — the public site is reached exclusively through the
+      # Cloudflare Tunnel (cloudflared runs on this same host and connects here via
+      # localhost). This keeps the app unreachable directly from the LAN/WAN.
+      - "127.0.0.1:3001:3001"
     environment:
       - PORT=3001
-      - ADMIN_PASSWORD=admin123
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
     volumes:
       - ./server/data:/app/server/data

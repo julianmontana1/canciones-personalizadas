@@ -1256,6 +1256,7 @@ export default function UserView() {
         isOpen={isSongVideoCreatorOpen}
         onClose={() => setIsSongVideoCreatorOpen(false)}
         song={selectedSongForVideo || generatedSong}
+        accessCode={accessCode}
       />
 
     </div>

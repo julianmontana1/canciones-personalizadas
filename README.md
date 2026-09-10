@@ -44,9 +44,14 @@ npm install
 Crea un archivo `.env` basado en `.env.example`:
 ```env
 PORT=3001
-ADMIN_PASSWORD=admin123
 ELEVENLABS_API_KEY=tu_api_key_aqui
 ```
+
+La contraseña de Superadmin **ya no tiene un valor por defecto**: al iniciar el
+servidor por primera vez se genera una contraseña aleatoria y se imprime una sola
+vez en los logs. Guárdala en ese momento (o cámbiala luego desde el panel de
+Configuración). Si quieres fijar una tú mismo, agrega `ADMIN_PASSWORD=tu_clave`
+al `.env` antes del primer arranque.
 
 ### 4. Iniciar servicios
 
