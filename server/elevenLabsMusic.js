@@ -10,6 +10,7 @@
 
 import { extractBoundary, parseMultipart } from './multipart.js';
 import { buildLyricsLines } from './lyricsFromTimestamps.js';
+import { limitTruePeak } from './audioLimiter.js';
 
 export class ElevenLabsComposeError extends Error {
   constructor(userMessage, { status = 502, details = '' } = {}) {
@@ -21,7 +22,10 @@ export class ElevenLabsComposeError extends Error {
   }
 }
 
-const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music/detailed';
+// mp3_48000_320: request the highest-quality MP3 the API offers (320kbps at the
+// same 48kHz sample rate we were already getting from "auto", which resolves to
+// only 192kbps) — no extra credit cost, meaningfully fewer compression artifacts.
+const COMPOSE_URL = 'https://api.elevenlabs.io/v1/music/detailed?output_format=mp3_48000_320';
 
 const requestCompose = async (apiKey, prompt, durationSec) => {
   const res = await fetch(COMPOSE_URL, {
@@ -64,7 +68,7 @@ const parseDetailedResponse = async (res) => {
   const jsonPart = parts.find((p) => (p.headers['content-type'] || '').includes('application/json'));
   const audioPart = parts.find((p) => (p.headers['content-type'] || '').startsWith('audio/'));
 
-  const audioBuffer = audioPart ? audioPart.body : buffer;
+  const rawAudioBuffer = audioPart ? audioPart.body : buffer;
   let lyricsLines = [];
   let songMetadata = null;
 
@@ -78,6 +82,15 @@ const parseDetailedResponse = async (res) => {
     } catch (err) {
       console.warn('[ElevenLabs] No se pudo parsear el JSON de metadata del multipart:', err.message);
     }
+  }
+
+  // Guarantee a safe true-peak ceiling regardless of how hot the AI's own master came
+  // back (word timestamps stay valid — the limiter is sample-accurate, no time shift).
+  let audioBuffer = rawAudioBuffer;
+  try {
+    audioBuffer = await limitTruePeak(rawAudioBuffer);
+  } catch (err) {
+    console.warn('[ElevenLabs] True-peak limiter falló, usando audio sin procesar:', err.message);
   }
 
   return { audioBuffer, lyricsLines, songMetadata };

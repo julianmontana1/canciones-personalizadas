@@ -10,7 +10,7 @@ const GENRE_PROFILES = {
     tempo: 'very slow and soothing, around 62 BPM, with a gentle rocking lullaby feel',
     vocals: 'extremely soft, tender maternal female voice, almost whispered, never belting',
     backing: 'soft wordless humming and gentle "la-la-la" harmonies drifting behind the lead',
-    production: 'quiet, warm and cocooning, wide soft reverb, very low dynamic range, calming from start to finish',
+    production: 'quiet, warm and cocooning, wide soft reverb, gentle natural dynamics with soft transients and no loudness-maximizing limiting, calming from start to finish',
     avoid: 'drums, brass, loud percussion, distortion, sudden dynamic changes, anything startling or energetic'
   },
 
@@ -175,7 +175,7 @@ const GENRE_PROFILES = {
     tempo: 'upbeat contemporary tempo around 105 BPM with a radio-friendly groove',
     vocals: 'youthful, polished contemporary lead vocal with rhythmic phrasing',
     backing: 'stacked vocal harmonies and gang-vocal layers lifting the chorus',
-    production: 'glossy modern pop mix, wide and loud, radio-ready master',
+    production: 'glossy modern pop mix, wide and punchy, radio-ready master with natural dynamics',
     avoid: 'heavy distortion, orchestral scoring, lo-fi noise, dated production'
   },
 
@@ -241,7 +241,7 @@ const GENRE_PROFILES = {
     tempo: 'high-energy tempo around 126 BPM built around tension and release',
     vocals: 'bright anthemic lead vocal, processed and wide, soaring over the drop',
     backing: 'huge stacked vocal layers and chopped vocal hooks in the drop',
-    production: 'festival-ready electronic production, massive stereo width, punchy and loud',
+    production: 'festival-ready electronic production, massive stereo width, punchy and energetic with controlled dynamics',
     avoid: 'acoustic folk instruments, live orchestra, lo-fi textures, slow tempo'
   },
 
@@ -331,7 +331,7 @@ const KEYWORD_HINTS = {
     tempo: 'high-energy tempo around 128 BPM with dynamic section changes',
     vocals: 'bright, polished, agile lead vocal with rap-sung verse trade-offs',
     backing: 'tight, punchy stacked group vocal harmonies',
-    production: 'ultra-polished, wide, maximalist modern pop production',
+    production: 'ultra-polished, wide, dynamic modern pop production',
     avoid: 'raw lo-fi textures, acoustic folk instruments, slow ballad tempo'
   }
 };
@@ -452,7 +452,8 @@ export const buildMusicPrompt = ({ style, names, references, durationSec, voiceG
     story ? `Weave these personal details naturally into the verses: ${story}.` : '',
     `The chorus must be catchy and repeated, and must name the person the song is dedicated to so it is unmistakably personal.`,
     `Production: ${profile.production}.`,
-    `Avoid: ${profile.avoid}.`
+    `Avoid: ${profile.avoid}.`,
+    `Mixing and mastering: use natural, professional dynamic range. Avoid brickwall limiting, excessive loudness maximization or heavy compression that could make the lead vocal, harmonies or choir sound harsh, distorted, squashed or fatiguing. Keep the true peak with a few dB of headroom below 0 dBFS, and make sure the vocals stay clear, present and undistorted at every moment of the song.`
   ]
     .filter(Boolean)
     .join(' ');
