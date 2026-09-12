@@ -89,6 +89,16 @@ export default function AccessCodeTopBar({
                     <span>⚠️ Sin código activo (Ingresa uno para recargar créditos)</span>
                   </span>
                 )}
+
+                {!codeInfo?.valid && (
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="text-xs font-semibold text-purple-300 hover:text-white underline underline-offset-2"
+                  >
+                    ¿No tienes uno? Ver planes ↓
+                  </button>
+                )}
               </div>
 
               {/* Subtitle helper */}
@@ -117,7 +127,7 @@ export default function AccessCodeTopBar({
                 <button
                   type="submit"
                   disabled={isValidatingCode || !inputCode.trim()}
-                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50 flex-shrink-0 flex items-center gap-1"
+                  className="min-h-11 px-3.5 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold text-xs shadow-md transition-all disabled:opacity-50 flex-shrink-0 flex items-center gap-1"
                 >
                   {isValidatingCode ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : 'Aplicar'}
                 </button>
@@ -125,7 +135,7 @@ export default function AccessCodeTopBar({
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="px-2.5 py-1.5 rounded-xl bg-gray-800 text-gray-300 hover:text-white text-xs"
+                    className="min-h-11 px-2.5 rounded-xl bg-gray-800 text-gray-300 hover:text-white text-xs"
                   >
                     Cancelar
                   </button>
@@ -135,7 +145,7 @@ export default function AccessCodeTopBar({
 
             {/* Demo codes shortcut */}
             {!codeInfo?.valid && !isEditing && (
-              <div className="hidden sm:flex items-center gap-1.5 text-[11px]">
+              <div className="flex items-center gap-1.5 text-[11px]">
                 <span className="text-gray-400 text-[10px]">Demo:</span>
                 <button
                   type="button"
@@ -146,7 +156,7 @@ export default function AccessCodeTopBar({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuickCode('VIP-5SONGS-K3M8')}
+                  onClick={() => handleQuickCode('DEMO-PACK5-7R1L')}
                   className="px-2 py-0.5 rounded-lg bg-gray-900 border border-pink-500/40 text-pink-300 hover:text-white font-mono text-[10px]"
                 >
                   5 Canciones

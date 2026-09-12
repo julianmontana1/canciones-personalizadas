@@ -1,22 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Sparkles, Music2, Clock, FileText, UserCheck, Key,
+  Sparkles, Music2, Clock, UserCheck, Key,
   CheckCircle2, AlertTriangle, Wand2, RefreshCw, Mic, Volume2,
-  Square, ShieldCheck, History, Download, Play, Pause, ChevronDown, ChevronUp,
+  Square, ShieldCheck, History, Play, Pause, ChevronDown, ChevronUp,
   Baby, Heart, Flame, Radio, Moon, Cake, Headphones, ArrowRight, Star,
-  Check, Music, Disc3, ShieldAlert, ChevronLeft, ChevronRight
+  Check, Disc3, ShieldAlert, ChevronLeft, ChevronRight, FileText
 } from 'lucide-react';
 
 import SongPlayer from './SongPlayer';
 import VoiceAssistantModal from './VoiceAssistantModal';
 import SongWizard from './SongWizard';
 import Sparkle, { SparkleCluster } from './Sparkle';
+import BrandMark from './BrandMark';
+import { BrandSongIcon, BrandStoryIcon, BrandAiIcon, BrandDownloadIcon } from './BrandIcons';
 import AccessCodeTopBar from './AccessCodeTopBar';
 import UserCreationsModal from './UserCreationsModal';
 import SongVideoCreatorModal from './SongVideoCreatorModal';
+import GenreGuideModal from './GenreGuideModal';
 import { playGenrePreview, stopAllAudioPreviews } from '../utils/genreAudioSynthesizer';
 import { MOOD_FILTERS, filterByMood } from '../utils/moodFilters';
 import { createSpeechRecognizer } from '../utils/speechRecognition';
+import { GENRE_PRESETS } from '../data/genrePresets';
 
 // Presentation metadata for the public showcase demos (content comes from the backend /api/demos)
 const PUBLIC_DEMO_META = {
@@ -43,49 +47,67 @@ const PUBLIC_DEMO_META = {
   }
 };
 
-// `mood` groups genres by the occasion the customer has in mind (used by the mood
-// filter pills), independent of their musical family.
-const GENRE_PRESETS = [
-  // Niños & Dormir
-  { id: 'dormir', mood: 'infantil', name: 'Canción de Dormir / Nana', desc: 'Suave, relajante, piano y caja de música', icon: '🌙', image: '/images/genero-nana.avif' },
-  { id: 'infantil', mood: 'infantil', name: 'Fiesta Infantil', desc: 'Movida y bailable, para saltar y bailar', icon: '🎈', image: '/images/genero-infantil.avif' },
-  { id: 'cumpleanosinfantil', mood: 'infantil', name: 'Cumpleaños Infantil', desc: 'Fiesta de cumpleaños con globos y torta', icon: '🎂' },
-  { id: 'infantilclasica', mood: 'infantil', name: 'Infantil Clásica', desc: 'Estilo clásico de toda la vida, tierno y educativo', icon: '📺' },
-  { id: 'infantilmoderna', mood: 'infantil', name: 'Infantil Moderna', desc: 'Ritmo actual y pegajoso, apto para niños', icon: '🌟' },
-  { id: 'rondas', mood: 'infantil', name: 'Rondas Infantiles', desc: 'Cancioncitas de juego para cantar en grupo', icon: '🎠', image: '/images/genero-rondas.avif' },
-
-  // Regional & Fiesta
-  { id: 'cumpleanos', mood: 'celebracion', name: 'Cumpleaños', desc: 'Festiva y alegre, para celebrar en grande', icon: '🥳' },
-  { id: 'banda', mood: 'celebracion', name: 'Banda Sinaloense', desc: 'Metales potentes, tambora, tuba y sabor norteño', icon: '🤠', image: '/images/genero-banda.avif' },
-  { id: 'salsa', mood: 'celebracion', name: 'Salsa Brava / Caribeña', desc: 'Trompetas vivas, piano montuno y congas', icon: '💃', image: '/images/genero-salsa.avif' },
-  { id: 'salsarosa', mood: 'amor', name: 'Salsa Rosa', desc: 'Salsa romántica, suave y dedicada al amor', icon: '🌹', image: '/images/genero-salsarosa.avif' },
-  { id: 'mariachi', mood: 'amor', name: 'Mariachi Tradicional', desc: 'Trompetas mexicanas, violines y guitarrón', icon: '🎺', image: '/images/genero-mariachi.avif' },
-  { id: 'vallenato', mood: 'amor', name: 'Vallenato', desc: 'Acordeón, caja y guacharaca contando una historia', icon: '🪗', image: '/images/genero-vallenato.avif' },
-  { id: 'carranga', mood: 'celebracion', name: 'Carranga', desc: 'Guitarra campesina, guacharaca y sabor andino', icon: '🌾', image: '/images/genero-carranga.avif' },
-  { id: 'cumbia', mood: 'celebracion', name: 'Cumbia / Fiesta', desc: 'Sabor tropical, acordeón y ritmo bailable', icon: '🎉', image: '/images/genero-cumbia.avif' },
-
-  // Populares & Románticos
-  { id: 'balada', mood: 'amor', name: 'Balada Romántica', desc: 'Emotiva, piano acústico y cuerdas', icon: '❤️', image: '/images/genero-balada.avif' },
-  { id: 'bolero', mood: 'amor', name: 'Bolero', desc: 'Guitarra requinto y voz nostálgica de trío', icon: '🎻', image: '/images/genero-bolero.avif' },
-  { id: 'bachata', mood: 'amor', name: 'Bachata', desc: 'Guitarra dominicana romántica, íntima y bailable', icon: '🌺', image: '/images/genero-bachata.avif' },
-  { id: 'pop', mood: 'celebracion', name: 'Pop Latino Moderno', desc: 'Melódico, rítmico y pegadizo', icon: '✨', image: '/images/genero-pop.avif' },
-  { id: 'acustico', mood: 'amor', name: 'Acústico Íntimo', desc: 'Guitarra acústica de palo y voz cálida', icon: '🪕', image: '/images/genero-acustico.avif' },
-
-  // Urbano & Energético
-  { id: 'reggaeton', mood: 'celebracion', name: 'Reggaetón / Urbano', desc: 'Beat bailable, dembow y ritmo moderno', icon: '🔥', image: '/images/genero-urbano.avif' },
-  { id: 'reggae', mood: 'celebracion', name: 'Reggae', desc: 'Ritmo relajado, bajo profundo y sabor caribeño', icon: '🌴', image: '/images/genero-reggae.avif' },
-  { id: 'rock', mood: 'celebracion', name: 'Rock', desc: 'Guitarras eléctricas potentes y batería viva', icon: '🎸', image: '/images/genero-rock.avif' },
-  { id: 'rap', mood: 'celebracion', name: 'Rap', desc: 'Flow rapeado, beats boom-bap y rimas con actitud', icon: '🎤', image: '/images/genero-rap.avif' },
-  { id: 'lofi', mood: 'amor', name: 'Lo-Fi Chill Hop', desc: 'Relajado, nostálgico, estilo vinilo', icon: '☕', image: '/images/genero-lofi.avif' },
-  { id: 'electronica', mood: 'celebracion', name: 'Electrónica / EDM', desc: 'Sintetizadores enérgicos y fiesta total', icon: '⚡', image: '/images/genero-electronica.avif' },
-];
-
 const DURATION_PRESETS = [
   { label: '30 seg', value: 30 },
   { label: '60 seg', value: 60 },
   { label: '90 seg', value: 90 },
   { label: '120 seg', value: 120 },
   { label: '180 seg', value: 180 },
+  { label: '240 seg', value: 240 },
+];
+
+const FAQ_ITEMS = [
+  {
+    q: '¿Cuánto tarda en llegar mi canción?',
+    a: 'La Inteligencia Artificial compone letra, música y voces en menos de un minuto. Apenas termina, la escuchas y descargas directamente en esta misma página — no necesitas esperar ningún correo.'
+  },
+  {
+    q: '¿Puedo elegir el tipo de voz?',
+    a: 'Sí. Al crear tu canción puedes elegir voz masculina, femenina, ambas (a dúo) o dejar que la IA elija la que mejor combine con el género y la historia.'
+  },
+  {
+    q: '¿Funciona en mi celular?',
+    a: 'Totalmente. SerenatIA funciona en cualquier celular, tablet o computador con navegador web moderno. No necesitas instalar ninguna aplicación.'
+  },
+  {
+    q: '¿En qué calidad viene la canción?',
+    a: 'Todas las canciones se generan en MP3 de alta fidelidad (320 kbps a 48 kHz) y pasan por una masterización automática que garantiza un sonido profesional y parejo.'
+  },
+  {
+    q: '¿Puedo pedir cambios o una nueva versión?',
+    a: 'Sí. Con el botón "Crear a partir de esta" (disponible junto a cada canción generada) puedes usar los mismos nombres e historia para generar una nueva versión en otro género o duración, usando otro crédito de tu código.'
+  },
+  {
+    q: '¿Qué pasa si no me gusta el resultado?',
+    a: (
+      <>
+        Al ser contenido digital personalizado y de entrega inmediata no realizamos devoluciones de dinero, pero revisamos cada caso.{' '}
+        <a href="#/reembolsos" className="text-purple-300 hover:text-white underline underline-offset-2">Lee nuestra política de reembolsos</a>.
+      </>
+    )
+  },
+  {
+    q: '¿Mi canción es privada?',
+    a: 'Sí. Tu historia, nombres y canción generada son completamente privados. No compartimos ni publicamos el contenido de nuestros clientes. Consulta nuestra Política de Privacidad para más detalles.'
+  },
+  {
+    q: '¿Qué incluye cada plan?',
+    a: 'Una Canción incluye 1 canción sin video. Pack 3 y Pack 5 incluyen video vertical para WhatsApp/Reels/TikTok, con más fotos y minutos de duración por canción — revisa el detalle completo en la tabla de Planes y Precios arriba.'
+  },
+  {
+    q: '¿Puedo escuchar un ejemplo antes de comprar?',
+    a: (
+      <>
+        Sí — en la sección{' '}
+        <a href="#estilos" className="text-purple-300 hover:text-white underline underline-offset-2">Estilos</a>{' '}
+        puedes escuchar demos reales generadas en cada género antes de elegir el tuyo.
+      </>
+    )
+  },
+  {
+    q: '¿Mi código de acceso expira?',
+    a: 'No. Tu código no tiene fecha de vencimiento — puedes usar tus créditos cuando quieras hasta agotarlos.'
+  }
 ];
 
 export default function UserView() {
@@ -119,6 +141,8 @@ export default function UserView() {
   // Code history & Creations state
   const [myCodeSongs, setMyCodeSongs] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [faqOpenIndex, setFaqOpenIndex] = useState(null);
+  const [isPlanModalOpen, setIsPlanModalOpen] = useState(false);
   const [isCreationsModalOpen, setIsCreationsModalOpen] = useState(false);
   const [isSongVideoCreatorOpen, setIsSongVideoCreatorOpen] = useState(false);
   const [selectedSongForVideo, setSelectedSongForVideo] = useState(null);
@@ -162,6 +186,13 @@ export default function UserView() {
   // Public showcase demos (real songs already generated)
   const [publicDemos, setPublicDemos] = useState([]);
 
+  // Real generated demo (audio + the story that produced it) per genre, see
+  // /api/genre-demos — the "Escuchar demo" button on each "Explora Estilos"
+  // card plays this when available (falling back to a generic instrument-only
+  // sample otherwise), and "Ver guía de creación" shows the story itself.
+  const [genreDemos, setGenreDemos] = useState({});
+  const [guideGenre, setGuideGenre] = useState(null); // the GENRE_PRESETS item currently shown in the guide modal
+
   // Hero sample audio state
   const [isPlayingHeroDemo, setIsPlayingHeroDemo] = useState(false);
   const heroAudioRef = useRef(null);
@@ -181,12 +212,31 @@ export default function UserView() {
       .catch(() => setPublicDemos([]));
   }, []);
 
+  // Load real per-genre demos for the "Explora Estilos" preview buttons
+  useEffect(() => {
+    fetch('/api/genre-demos')
+      .then((res) => res.json())
+      .then((data) => setGenreDemos(data && typeof data === 'object' ? data : {}))
+      .catch(() => setGenreDemos({}));
+  }, []);
+
   // Fetch my songs when code is valid
   useEffect(() => {
     if (codeInfo?.valid && accessCode) {
       fetchCodeHistory(accessCode);
     }
   }, [codeInfo?.valid, accessCode]);
+
+  // Duration options are capped by the validated code's plan. If the customer had
+  // picked a longer duration before entering a more limited code (e.g. switching
+  // from a Pack 5 to a Plan Solo code), clamp the selection down so it stays valid.
+  const maxDurationSec = codeInfo?.maxDurationSec || 300;
+  const durationPresets = DURATION_PRESETS.filter((p) => p.value <= maxDurationSec);
+  useEffect(() => {
+    if (duration > maxDurationSec) {
+      setDuration(maxDurationSec);
+    }
+  }, [maxDurationSec]);
 
   // Clean up audio previews on unmount
   useEffect(() => {
@@ -236,7 +286,7 @@ export default function UserView() {
       localStorage.setItem('songcraft_user_code', clean);
       fetchCodeHistory(clean);
     } catch (err) {
-      setCodeError('Error al contactar con el servidor de validación.');
+      setCodeError('No pudimos conectar con el servidor. Verifica tu conexión a internet e intenta de nuevo.');
     } finally {
       setIsValidatingCode(false);
     }
@@ -254,7 +304,57 @@ export default function UserView() {
     }
   };
 
-  // Toggle 10-second real instrument studio preview
+  // Called once a story-video finishes rendering, so it shows up right away next
+  // to the audio in the results screen without needing a reload — patches every
+  // local copy of that song (active player, "mis creaciones" cache) and refreshes
+  // the server-backed history too. A song can hold several independent finished
+  // videos (plan-dependent), so this APPENDS rather than overwrites.
+  //
+  // accountVideosUsed is spent per ACCOUNT, not per song, so it has to bump on
+  // EVERY cached song object for this code — not just the one that got the new
+  // video — or other songs' "can I create another?" gate would read stale.
+  const patchWithNewVideo = (s, songFilename, videoUrl, videoExpiresAt) => {
+    if (!s) return s;
+    const bumpedAccountVideosUsed = (s.accountVideosUsed ?? 0) + 1;
+    if (s.filename !== songFilename) {
+      return { ...s, accountVideosUsed: bumpedAccountVideosUsed };
+    }
+    const existing = Array.isArray(s.videos)
+      ? s.videos
+      : s.videoUrl
+        ? [{ url: s.videoUrl, expiresAt: s.videoExpiresAt }]
+        : [];
+    return {
+      ...s,
+      videos: [...existing, { url: videoUrl, expiresAt: videoExpiresAt }],
+      accountVideosUsed: bumpedAccountVideosUsed
+    };
+  };
+
+  const handleVideoReady = (songFilename, videoUrl, videoExpiresAt) => {
+    const patch = (s) => patchWithNewVideo(s, songFilename, videoUrl, videoExpiresAt);
+
+    setGeneratedSong((prev) => {
+      const next = patch(prev);
+      if (next && next !== prev) {
+        localStorage.setItem('songcraft_active_song', JSON.stringify(next));
+      }
+      return next || prev;
+    });
+
+    setLocalSongs((prev) => {
+      const next = prev.map(patch);
+      localStorage.setItem('songcraft_history_songs', JSON.stringify(next));
+      return next;
+    });
+
+    setSelectedSongForVideo((prev) => patch(prev) || prev);
+
+    if (accessCode) fetchCodeHistory(accessCode);
+  };
+
+  // Toggle preview — a real generated demo for that genre when one exists
+  // (see genreDemos), otherwise the generic instrument-only sample.
   const handleToggleGenrePreview = (e, genreId) => {
     if (e && e.stopPropagation) e.stopPropagation();
     if (playingPreviewGenre === genreId) {
@@ -264,7 +364,7 @@ export default function UserView() {
       setPlayingPreviewGenre(genreId);
       playGenrePreview(genreId, () => {
         setPlayingPreviewGenre(null);
-      });
+      }, genreDemos[genreId]?.audioUrl);
     }
   };
 
@@ -419,12 +519,14 @@ export default function UserView() {
 
       // Refresh code validation & history
       validateCode(accessCode);
-      
-      // Scroll smoothly to player
-      window.scrollTo({ top: 400, behavior: 'smooth' });
+
+      // Scroll smoothly to the result — same anchor used everywhere else in
+      // this file, so it lands correctly regardless of how tall the page is
+      // on mobile's stacked layout (a hardcoded pixel offset previously missed).
+      scrollToWizard();
     } catch (err) {
       console.error(err);
-      setError(err.message || 'Error de conexión con el servidor.');
+      setError(err.message || 'No pudimos conectar con el servidor. Verifica tu conexión a internet e intenta de nuevo.');
     } finally {
       setIsGenerating(false);
     }
@@ -451,7 +553,7 @@ export default function UserView() {
     setDuration(song?.duration || 60);
     setVoiceGender(song?.voiceGender || 'cualquiera');
     setError('');
-    window.scrollTo({ top: 400, behavior: 'smooth' });
+    scrollToWizard();
   };
 
   const scrollToWizard = () => {
@@ -459,10 +561,8 @@ export default function UserView() {
     if (el) el.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const selectPlan = (code) => {
-    setAccessCode(code);
-    validateCode(code);
-    scrollToWizard();
+  const selectPlan = () => {
+    setIsPlanModalOpen(true);
   };
 
   return (
@@ -549,7 +649,7 @@ export default function UserView() {
             </div>
 
             {/* Metrics Bar */}
-            <div className="pt-6 border-t border-gray-800/80 grid grid-cols-3 gap-4 text-center sm:text-left max-w-md mx-auto lg:mx-0">
+            <div className="pt-6 border-t border-gray-800/80 grid grid-cols-2 sm:grid-cols-3 gap-4 text-center sm:text-left max-w-md mx-auto lg:mx-0">
               <div>
                 <div className="text-xl sm:text-2xl font-black text-white">+500</div>
                 <div className="text-xs text-gray-400 mt-0.5">canciones creadas</div>
@@ -561,7 +661,7 @@ export default function UserView() {
                 </div>
                 <div className="text-xs text-gray-400 mt-0.5">valoración media</div>
               </div>
-              <div>
+              <div className="col-span-2 sm:col-span-1">
                 <div className="text-xl sm:text-2xl font-black text-teal-400">~5 min</div>
                 <div className="text-xs text-gray-400 mt-0.5">tiempo de entrega</div>
               </div>
@@ -633,17 +733,26 @@ export default function UserView() {
             CÓMO FUNCIONA
           </span>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-1.5">
-            De tu historia a una canción, en 4 pasos
+            De tu historia a una canción, en 5 pasos
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {[
+            {
+              step: '00',
+              title: 'Elige tu plan y activa tu código',
+              desc: 'Compra un código de acceso según cuántas canciones necesites y actívalo en la barra superior.',
+              icon: Key,
+              color: 'text-amber-400',
+              border: 'border-amber-500/20',
+              onClick: () => document.getElementById('precios')?.scrollIntoView({ behavior: 'smooth' })
+            },
             {
               step: '01',
               title: 'Elige el género',
               desc: 'Balada, banda, nana de dormir, reggaetón, salsa y más de 13 estilos.',
-              icon: Music2,
+              icon: BrandSongIcon,
               color: 'text-purple-400',
               border: 'border-purple-500/20'
             },
@@ -651,7 +760,7 @@ export default function UserView() {
               step: '02',
               title: 'Cuéntanos la historia',
               desc: 'Escribe los nombres, recuerdos y anécdotas, o díctalo directamente con voz.',
-              icon: FileText,
+              icon: BrandStoryIcon,
               color: 'text-pink-400',
               border: 'border-pink-500/20'
             },
@@ -659,7 +768,7 @@ export default function UserView() {
               step: '03',
               title: 'La IA compone',
               desc: 'Nuestros modelos afinados estructuran letra, acordes, armonías y voces de estudio.',
-              icon: Wand2,
+              icon: BrandAiIcon,
               color: 'text-indigo-400',
               border: 'border-indigo-500/20'
             },
@@ -667,7 +776,7 @@ export default function UserView() {
               step: '04',
               title: 'Escucha y descarga',
               desc: 'Recibe tu canción en MP3 de alta fidelidad, lista para enviar por WhatsApp o regalar.',
-              icon: Download,
+              icon: BrandDownloadIcon,
               color: 'text-emerald-400',
               border: 'border-emerald-500/20'
             }
@@ -676,7 +785,8 @@ export default function UserView() {
             return (
               <div
                 key={item.step}
-                className={`glass-panel p-6 rounded-3xl border ${item.border} hover:border-gray-600 transition-all duration-300 flex flex-col justify-between group hover:-translate-y-1`}
+                onClick={item.onClick}
+                className={`glass-panel p-6 rounded-3xl border ${item.border} hover:border-gray-600 transition-all duration-300 flex flex-col justify-between group hover:-translate-y-1 ${item.onClick ? 'cursor-pointer' : ''}`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -775,7 +885,9 @@ export default function UserView() {
             handleToggleGenrePreview={handleToggleGenrePreview}
             playingPreviewGenre={playingPreviewGenre}
             genrePresets={GENRE_PRESETS}
-            durationPresets={DURATION_PRESETS}
+            durationPresets={durationPresets}
+            genreDemos={genreDemos}
+            onOpenGenreGuide={setGuideGenre}
           />
         )}
 
@@ -856,30 +968,46 @@ export default function UserView() {
                       <span className="text-5xl opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all duration-300">{item.icon}</span>
                     )}
 
-                    {/* Top Badge & 10s Demo Button */}
-                    <div className="absolute top-4 left-4 right-4 flex items-center justify-between">
+                    {/* Top Badge & Demo Buttons */}
+                    <div className="absolute top-4 left-4 right-4 flex items-start justify-between">
                       <span className="text-lg">{item.icon}</span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleToggleGenrePreview(e, item.id)}
-                        className={`flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full border transition-all ${
-                          isPlaying
-                            ? 'bg-amber-500 text-gray-950 border-amber-400 animate-pulse'
-                            : 'bg-black/70 text-amber-300 border-amber-400/30 hover:bg-amber-500/20'
-                        }`}
-                      >
-                        {isPlaying ? (
-                          <>
-                            <Square className="w-2.5 h-2.5 fill-current" />
-                            <span>Parar</span>
-                          </>
-                        ) : (
-                          <>
-                            <Play className="w-2.5 h-2.5 fill-current" />
-                            <span>Demo 10s</span>
-                          </>
+                      <div className="flex flex-col items-end gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleGenrePreview(e, item.id)}
+                          className={`flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full border transition-all ${
+                            isPlaying
+                              ? 'bg-amber-500 text-gray-950 border-amber-400 animate-pulse'
+                              : 'bg-black/70 text-amber-300 border-amber-400/30 hover:bg-amber-500/20'
+                          }`}
+                        >
+                          {isPlaying ? (
+                            <>
+                              <Square className="w-2.5 h-2.5 fill-current" />
+                              <span>Parar</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-2.5 h-2.5 fill-current" />
+                              <span>{genreDemos[item.id] ? 'Escuchar demo' : 'Demo 10s'}</span>
+                            </>
+                          )}
+                        </button>
+
+                        {genreDemos[item.id] && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setGuideGenre(item);
+                            }}
+                            className="flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full border bg-black/70 text-purple-300 border-purple-400/30 hover:bg-purple-500/20 transition-all"
+                          >
+                            <FileText className="w-2.5 h-2.5" />
+                            <span>Ver guía de creación</span>
+                          </button>
                         )}
-                      </button>
+                      </div>
                     </div>
 
                     {/* Bottom Content */}
@@ -906,17 +1034,21 @@ export default function UserView() {
                 <ChevronLeft className="w-4 h-4" />
               </button>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 {Array.from({ length: stylesPageCount }).map((_, i) => (
                   <button
                     key={i}
                     type="button"
                     onClick={() => setStylesPage(i)}
-                    className={`h-1.5 rounded-full transition-all ${
-                      i === stylesPage ? 'w-6 bg-gradient-to-r from-purple-500 to-pink-500' : 'w-1.5 bg-gray-700 hover:bg-gray-600'
-                    }`}
+                    className="p-2 -m-1"
                     aria-label={`Ir a la página ${i + 1}`}
-                  />
+                  >
+                    <span
+                      className={`block h-1.5 rounded-full transition-all ${
+                        i === stylesPage ? 'w-6 bg-gradient-to-r from-purple-500 to-pink-500' : 'w-1.5 bg-gray-700 hover:bg-gray-600'
+                      }`}
+                    />
+                  </button>
                 ))}
               </div>
 
@@ -1024,7 +1156,7 @@ export default function UserView() {
                 UNA CANCIÓN
               </span>
               <div className="text-3xl sm:text-4xl font-black text-white mt-2">
-                $10.000 <span className="text-xs font-normal text-gray-400">COP</span>
+                $20.000 <span className="text-xs font-normal text-gray-400">COP</span>
               </div>
               <p className="text-xs text-gray-400 mt-2">
                 Ideal para un detalle inolvidable, cumpleaños o sorpresa.
@@ -1037,18 +1169,22 @@ export default function UserView() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Descarga en MP3 de alta fidelidad</span>
+                  <span>Hasta 2 minutos de duración</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Entrega en ~5 minutos</span>
+                  <span>Sin video</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Descarga en MP3 de alta fidelidad</span>
                 </li>
               </ul>
             </div>
 
             <button
               type="button"
-              onClick={() => selectPlan('TEST-1SONG-7A9B')}
+              onClick={() => selectPlan()}
               className="mt-8 w-full py-3 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-200 hover:text-white font-semibold text-xs border border-gray-700 transition-all"
             >
               Elegir plan
@@ -1069,7 +1205,7 @@ export default function UserView() {
                 PACK 3 CANCIONES
               </span>
               <div className="text-3xl sm:text-4xl font-black text-white mt-2">
-                $25.000 <span className="text-xs font-normal text-gray-400">COP</span>
+                $50.000 <span className="text-xs font-normal text-gray-400">COP</span>
               </div>
               <p className="text-xs text-gray-300 mt-2">
                 La mejor opción para probar distintos géneros o dedicar a varias personas.
@@ -1082,22 +1218,22 @@ export default function UserView() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
-                  <span>Duración extendida hasta 3 minutos</span>
+                  <span>Hasta 3 minutos de duración por canción</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
-                  <span>Asistente por voz IA prioritario</span>
+                  <span>Con video incluido (1 sola foto)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-pink-400 stroke-[3]" />
-                  <span>Descarga directa MP3 para WhatsApp</span>
+                  <span>Descarga directa MP3 y MP4</span>
                 </li>
               </ul>
             </div>
 
             <button
               type="button"
-              onClick={() => selectPlan('VIP-5SONGS-K3M8')}
+              onClick={() => selectPlan()}
               className="mt-8 w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-pink-500 hover:from-purple-500 hover:via-pink-500 hover:to-pink-400 text-white font-bold text-xs shadow-lg shadow-pink-900/40 hover:scale-[1.02] transition-all shimmer-effect"
             >
               Elegir plan
@@ -1111,7 +1247,7 @@ export default function UserView() {
                 PACK 5 CANCIONES
               </span>
               <div className="text-3xl sm:text-4xl font-black text-white mt-2">
-                $40.000 <span className="text-xs font-normal text-gray-400">COP</span>
+                $70.000 <span className="text-xs font-normal text-gray-400">COP</span>
               </div>
               <p className="text-xs text-gray-400 mt-2">
                 Para familias, creadores o regalos múltiples con máxima personalización.
@@ -1124,7 +1260,11 @@ export default function UserView() {
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400" />
-                  <span>Estilos musicales ilimitados</span>
+                  <span>Hasta 4 minutos de duración por canción</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  <span>Con video incluido (hasta 5 fotos)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-400" />
@@ -1135,13 +1275,54 @@ export default function UserView() {
 
             <button
               type="button"
-              onClick={() => selectPlan('MASTER-UNLIMITED-PRO')}
+              onClick={() => selectPlan()}
               className="mt-8 w-full py-3 rounded-2xl bg-gray-900 hover:bg-gray-800 text-gray-200 hover:text-white font-semibold text-xs border border-gray-700 transition-all"
             >
               Elegir plan
             </button>
           </div>
 
+        </div>
+      </section>
+
+      {/* ============================================================ */}
+      {/* SECTION 6B: PREGUNTAS FRECUENTES                            */}
+      {/* ============================================================ */}
+      <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 border-t border-gray-800/60">
+        <div className="text-center mb-10">
+          <span className="text-xs font-bold uppercase tracking-widest text-purple-400">
+            PREGUNTAS FRECUENTES
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1.5">
+            Todo lo que necesitas saber
+          </h2>
+        </div>
+
+        <div className="space-y-3">
+          {FAQ_ITEMS.map((item, i) => {
+            const isOpen = faqOpenIndex === i;
+            return (
+              <div
+                key={item.q}
+                className="glass-panel rounded-2xl border border-gray-800 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => setFaqOpenIndex(isOpen ? null : i)}
+                  className="w-full min-h-11 px-5 py-4 flex items-center justify-between gap-3 text-left"
+                  aria-expanded={isOpen}
+                >
+                  <span className="text-sm font-semibold text-white">{item.q}</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {isOpen && (
+                  <div className="px-5 pb-4 text-xs text-gray-400 leading-relaxed">
+                    {item.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -1186,8 +1367,8 @@ export default function UserView() {
             {/* Column 1: Logo & Info */}
             <div className="space-y-3">
               <div className="flex items-center space-x-2">
-                <Music className="w-5 h-5 text-pink-400" />
-                <span className="font-extrabold text-lg text-white">SerenatIA</span>
+                <BrandMark className="w-5 h-5" />
+                <span className="text-lg text-white"><span className="font-bold">Serenat</span><span className="font-light">IA</span></span>
               </div>
               <p className="text-gray-400 text-xs leading-relaxed">
                 Canciones personalizadas con Inteligencia Artificial y toque humano para momentos inolvidables.
@@ -1209,19 +1390,18 @@ export default function UserView() {
               <div className="font-semibold text-white mb-3">Ayuda</div>
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#como-funciona" className="hover:text-white">Cómo funciona</a></li>
-                <li><a href="#precios" className="hover:text-white">Preguntas frecuentes</a></li>
+                <li><a href="#faq" className="hover:text-white">Preguntas frecuentes</a></li>
                 <li><a href="#estilos" className="hover:text-white">Guía de géneros</a></li>
               </ul>
             </div>
 
             {/* Column 4: Legal */}
             <div>
-              <div className="font-semibold text-white mb-3">Legal y Administración</div>
+              <div className="font-semibold text-white mb-3">Legal</div>
               <ul className="space-y-2 text-gray-400">
                 <li><a href="#/terminos" className="hover:text-white transition-colors">Términos y condiciones</a></li>
                 <li><a href="#/privacidad" className="hover:text-white transition-colors">Política de privacidad</a></li>
                 <li><a href="#/reembolsos" className="hover:text-white transition-colors">Política de reembolsos</a></li>
-                <li><a href="#/admin" className="text-amber-400/80 hover:text-amber-300 transition-colors">🔐 Panel Superadmin</a></li>
               </ul>
             </div>
 
@@ -1257,7 +1437,69 @@ export default function UserView() {
         onClose={() => setIsSongVideoCreatorOpen(false)}
         song={selectedSongForVideo || generatedSong}
         accessCode={accessCode}
+        onVideoReady={handleVideoReady}
       />
+
+      {/* "Ver guía de creación" — shows the story behind a genre's real demo */}
+      <GenreGuideModal
+        isOpen={!!guideGenre}
+        onClose={() => setGuideGenre(null)}
+        genre={guideGenre}
+        demo={guideGenre ? genreDemos[guideGenre.id] : null}
+        onUseStyle={() => {
+          if (guideGenre) setStyle(guideGenre.name);
+          setGuideGenre(null);
+          scrollToWizard();
+        }}
+      />
+
+      {/* Plan Info Modal — "Habla con quien te lo compartió" */}
+      {isPlanModalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center px-4">
+          <div
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setIsPlanModalOpen(false)}
+          />
+          <div className="relative w-full max-w-sm glass-panel-glow rounded-3xl p-8 text-center space-y-5 animate-[fadeIn_0.2s_ease-out]">
+            {/* Close button */}
+            <button
+              type="button"
+              onClick={() => setIsPlanModalOpen(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+              aria-label="Cerrar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+              </svg>
+            </button>
+
+            {/* Emoji */}
+            <div className="text-6xl">🤝</div>
+
+            {/* Message */}
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold text-white">
+                ¡Genial que te interese!
+              </h3>
+              <p className="text-sm text-gray-300 leading-relaxed">
+                Habla con la persona que te compartió este enlace para obtener tu <strong className="text-purple-300">código de acceso</strong> y empezar a crear tu canción personalizada.
+              </p>
+            </div>
+
+            {/* Action */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsPlanModalOpen(false);
+                scrollToWizard();
+              }}
+              className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-500 hover:via-pink-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-purple-900/40 hover:scale-[1.02] active:scale-95 transition-all"
+            >
+              Ya tengo mi código →
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

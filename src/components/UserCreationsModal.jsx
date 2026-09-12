@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Music, Download, Play, Pause, Video, Sparkles, Clock, Calendar, Search, RefreshCw, FileText } from 'lucide-react';
 import Sparkle from './Sparkle';
-import { buildSongFilename } from '../utils/filenameBuilder';
+import { buildSongFilename, buildVideoFilename } from '../utils/filenameBuilder';
 
 export default function UserCreationsModal({
   isOpen,
@@ -70,8 +70,8 @@ export default function UserCreationsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/85 backdrop-blur-xl animate-fadeIn">
-      <div className="relative w-full max-w-4xl max-h-[90vh] bg-[#0c0f1f] border border-purple-500/30 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-6 bg-black/85 backdrop-blur-xl animate-fadeIn">
+      <div className="relative w-full h-[100dvh] sm:h-auto sm:max-w-4xl max-h-[100dvh] sm:max-h-[90vh] bg-[#0c0f1f] border border-purple-500/30 rounded-none sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col">
         
         {/* Header */}
         <div className="p-5 sm:p-6 border-b border-gray-800 flex items-center justify-between gap-4 bg-[#0e1226]/80">
@@ -145,6 +145,18 @@ export default function UserCreationsModal({
           ) : (
             filteredSongs.map((song) => {
               const isPlaying = playingSongId === song.id;
+              // A song can hold several independent finished videos at once
+              // (plan-dependent); older records carry a single videoUrl instead.
+              const existingVideos = Array.isArray(song.videos)
+                ? song.videos
+                : song.videoUrl
+                  ? [{ url: song.videoUrl, expiresAt: song.videoExpiresAt }]
+                  : [];
+              const activeVideos = existingVideos.filter((v) => !v.expiresAt || new Date(v.expiresAt).getTime() > Date.now());
+              // maxVideoProjects is spent per ACCOUNT, not per song — a customer can
+              // put both of their plan's video slots on the same song or split them.
+              const accountVideosUsed = song.accountVideosUsed ?? activeVideos.length;
+              const canCreateMoreVideos = accountVideosUsed < (song.maxVideoProjects ?? 1);
 
               return (
                 <div
@@ -208,19 +220,38 @@ export default function UserCreationsModal({
                   {/* Right: Actions */}
                   <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end pt-2 md:pt-0 border-t md:border-t-0 border-gray-800">
                     
-                    {/* Crear Video Button */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleClose();
-                        onOpenVideoCreator(song);
-                      }}
-                      className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-pink-900/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
-                      title="Crear video vertical 9:16 con tus fotos"
-                    >
-                      <Video className="w-3.5 h-3.5 text-pink-200" />
-                      <span>Crear Video</span>
-                    </button>
+                    {/* Video: a download link per active video (a song can hold several,
+                        plan-dependent), plus the creator CTA while under the plan's limit */}
+                    {song.hasVideo !== false && (
+                      <>
+                        {activeVideos.map((v, idx) => (
+                          <a
+                            key={v.url || idx}
+                            href={v.url}
+                            download={buildVideoFilename(song)}
+                            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs shadow-md shadow-emerald-900/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                            title={v.expiresAt ? `Disponible hasta el ${new Date(v.expiresAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })}` : 'Descargar video'}
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            <span>{activeVideos.length > 1 ? `Video ${idx + 1}` : 'Video'}</span>
+                          </a>
+                        ))}
+                        {canCreateMoreVideos && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleClose();
+                              onOpenVideoCreator(song);
+                            }}
+                            className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white font-bold text-xs shadow-md shadow-pink-900/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                            title="Crear video vertical 9:16 con tus fotos"
+                          >
+                            <Video className="w-3.5 h-3.5 text-pink-200" />
+                            <span>{activeVideos.length > 0 ? 'Otro Video' : 'Crear Video'}</span>
+                          </button>
+                        )}
+                      </>
+                    )}
 
                     {/* Descargar MP3 */}
                     <button

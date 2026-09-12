@@ -21,13 +21,21 @@ dist-ssr
 server/data/settings.json
 server/data/history.json
 server/data/history.local.json
+server/data/planOverrides.json
+server/data/backups/
 
 # Generated storage
 server/storage/songs/*
 !server/storage/songs/.gitkeep
+server/storage/videos/*
+!server/storage/videos/.gitkeep
 
 # Raw source images (unprocessed originals, not needed once optimized into public/images)
 /demoimages/
+
+# Raw brand-system design source (logo/icon exports already copied into
+# src/components/BrandMark.jsx, BrandIcons.jsx and public/images/)
+/brandsystem/
 
 # Editor directories and files
 .vscode/*

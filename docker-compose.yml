@@ -7,13 +7,16 @@ services:
       # Bound to localhost only — the public site is reached exclusively through the
       # Cloudflare Tunnel (cloudflared runs on this same host and connects here via
       # localhost). This keeps the app unreachable directly from the LAN/WAN.
-      - "127.0.0.1:3001:3001"
+      # Host side is 8088 — update the Cloudflare Tunnel's ingress rule to match
+      # if it's currently pointed at the old 3001.
+      - "127.0.0.1:8088:3001"
     environment:
       - PORT=3001
       - ELEVENLABS_API_KEY=${ELEVENLABS_API_KEY:-}
     volumes:
       - ./server/data:/app/server/data
       - ./server/storage/songs:/app/server/storage/songs
+      - ./server/storage/videos:/app/server/storage/videos
 
 volumes:
   songcraft_data:

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Play, Pause, Download, Volume2, VolumeX, Sparkles, Music, CheckCircle2, Video, FileText, Calendar, Clock, Mars, Venus, VenusAndMars } from 'lucide-react';
-import { buildSongFilename } from '../utils/filenameBuilder';
+import { Play, Pause, Download, Volume2, VolumeX, Sparkles, Music, CheckCircle2, Video, FileText, Calendar, Clock, Mars, Venus, VenusAndMars, RefreshCw } from 'lucide-react';
+import { buildSongFilename, buildVideoFilename } from '../utils/filenameBuilder';
 
 export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }) {
   const audioRef = useRef(null);
@@ -11,6 +11,20 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
   const [downloaded, setDownloaded] = useState(false);
 
   const audioSrc = song?.audioUrl || '';
+  // A song can hold several independent finished videos at once; older records
+  // carry just a single videoUrl/videoExpiresAt pair instead, so fall back to
+  // wrapping that as a one-item list.
+  const existingVideos = Array.isArray(song?.videos)
+    ? song.videos
+    : song?.videoUrl
+      ? [{ url: song.videoUrl, expiresAt: song.videoExpiresAt }]
+      : [];
+  // maxVideoProjects is spent per ACCOUNT, not per song — a customer can put
+  // both of their plan's video slots on the same song, or split them across
+  // different ones. accountVideosUsed is that account-wide running total.
+  const maxVideoProjects = song?.maxVideoProjects ?? Math.max(existingVideos.length, 1);
+  const accountVideosUsed = song?.accountVideosUsed ?? existingVideos.length;
+  const canCreateMoreVideos = accountVideosUsed < maxVideoProjects;
 
   useEffect(() => {
     setIsPlaying(false);
@@ -159,7 +173,7 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
             </div>
 
             {song?.references && (
-              <p className="text-xs sm:text-sm text-gray-300 leading-relaxed whitespace-pre-line">
+              <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">
                 "{song.references}"
               </p>
             )}
@@ -192,7 +206,7 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
         )}
 
         {/* Dynamic Animated Waveform */}
-        <div className="bg-gray-950/60 rounded-2xl p-4 border border-gray-800/80 flex items-center justify-center gap-1.5 h-20 overflow-hidden">
+        <div className="bg-gray-950/60 rounded-2xl p-4 border border-gray-800/80 flex items-center justify-center gap-1 h-20 overflow-hidden">
           {[
             'animate-wave-1', 'animate-wave-3', 'animate-wave-5', 'animate-wave-2',
             'animate-wave-4', 'animate-wave-6', 'animate-wave-2', 'animate-wave-5',
@@ -204,7 +218,7 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
           ].map((animClass, idx) => (
             <span
               key={idx}
-              className={`w-1.5 rounded-full transition-all duration-300 ${
+              className={`w-1 rounded-full transition-all duration-300 ${
                 isPlaying
                   ? `bg-gradient-to-t from-purple-500 to-pink-400 ${animClass}`
                   : 'bg-gray-800 h-2'
@@ -224,7 +238,7 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
             max={duration || 100}
             value={currentTime}
             onChange={handleSeek}
-            className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500 focus:outline-none"
+            className="w-full h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-purple-500 focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-500 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-purple-500 [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:cursor-pointer"
           />
           <div className="flex justify-between text-xs font-mono text-gray-400">
             <span>{formatTime(currentTime)}</span>
@@ -285,28 +299,78 @@ export default function SongPlayer({ song, title, subtitle, onOpenVideoCreator }
           </button>
         </div>
 
-        {/* CREATE VIDEO WITH PHOTOS BANNER */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-indigo-950/40 p-4 rounded-2xl border border-pink-500/40 shadow-lg shadow-pink-950/30">
-          <div className="text-center sm:text-left">
-            <div className="font-bold text-white text-sm flex items-center justify-center sm:justify-start gap-1.5">
-              <Video className="w-4 h-4 text-pink-400" />
-              <span>¿Quieres convertirla en video con tus fotos?</span>
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            </div>
-            <p className="text-xs text-gray-300 mt-0.5">
-              Agrega hasta 5 fotos y genera un video vertical (9:16) con la letra para Estados de WhatsApp, Reels o TikTok.
-            </p>
-          </div>
+        {/* VIDEO RESULT(S) (if any have been generated) and/or the CTA to create one — only for plans that include video */}
+        {(song?.hasVideo !== false) && (
+          <div className="space-y-3">
+            {existingVideos.map((v, idx) => (
+              <div
+                key={v.url || idx}
+                className="p-4 rounded-2xl bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-indigo-950/40 border border-pink-500/40 shadow-lg shadow-pink-950/30 space-y-3"
+              >
+                <div className="flex items-center gap-1.5 text-sm font-bold text-white">
+                  <Video className="w-4 h-4 text-pink-400" />
+                  <span>{existingVideos.length > 1 ? `Video vertical ${idx + 1} de ${existingVideos.length}` : 'Tu video vertical está listo'}</span>
+                  <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                </div>
 
-          <button
-            type="button"
-            onClick={() => onOpenVideoCreator && onOpenVideoCreator(song)}
-            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-xl shadow-pink-900/60 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 flex-shrink-0 shimmer-effect"
-          >
-            <Video className="w-4 h-4 text-pink-200" />
-            <span>CREAR VIDEO CON MIS FOTOS</span>
-          </button>
-        </div>
+                <video
+                  src={v.url}
+                  controls
+                  playsInline
+                  className="w-full max-w-[240px] mx-auto rounded-2xl border border-purple-500/30 bg-black aspect-[9/16] object-cover"
+                />
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5">
+                  <a
+                    href={v.url}
+                    download={buildVideoFilename(song)}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-900/40 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Descargar Video MP4</span>
+                  </a>
+                </div>
+
+                <p className="text-[11px] text-amber-300 flex items-center justify-center gap-1.5 text-center">
+                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>
+                    Disponible por 14 días desde su creación
+                    {v.expiresAt && ` (hasta el ${new Date(v.expiresAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'long' })})`}.
+                    Descárgalo antes de que se elimine automáticamente.
+                  </span>
+                </p>
+              </div>
+            ))}
+
+            {canCreateMoreVideos ? (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-pink-950/40 via-purple-950/30 to-indigo-950/40 p-4 rounded-2xl border border-pink-500/40 shadow-lg shadow-pink-950/30">
+                <div className="text-center sm:text-left">
+                  <div className="font-bold text-white text-sm flex items-center justify-center sm:justify-start gap-1.5">
+                    <Video className="w-4 h-4 text-pink-400" />
+                    <span>{existingVideos.length > 0 ? '¿Quieres otro video con distintas fotos?' : '¿Quieres convertirla en video con tus fotos?'}</span>
+                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                  </div>
+                  <p className="text-xs text-gray-300 mt-0.5">
+                    Agrega {song?.maxPhotos === 1 ? '1 foto' : `hasta ${song?.maxPhotos || 5} fotos`} y genera un video vertical (9:16) con la letra para Estados de WhatsApp, Reels o TikTok.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => onOpenVideoCreator && onOpenVideoCreator(song)}
+                  className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-pink-600 via-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold text-sm rounded-xl shadow-xl shadow-pink-900/60 transition-all hover:scale-105 active:scale-95 flex items-center justify-center gap-2 flex-shrink-0 shimmer-effect"
+                >
+                  {existingVideos.length > 0 ? <RefreshCw className="w-4 h-4 text-pink-200" /> : <Video className="w-4 h-4 text-pink-200" />}
+                  <span>{existingVideos.length > 0 ? 'CREAR OTRO VIDEO' : 'CREAR VIDEO CON MIS FOTOS'}</span>
+                </button>
+              </div>
+            ) : (
+              <p className="text-[11px] text-gray-500 text-center">
+                Ya generaste el máximo de {maxVideoProjects} video{maxVideoProjects === 1 ? '' : 's'} que permite tu plan en tu cuenta.
+              </p>
+            )}
+          </div>
+        )}
 
       </div>
     </div>

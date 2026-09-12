@@ -1,7 +1,7 @@
 {
   "name": "cancionespersonalizadas",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,17 +11,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@remotion/player": "^4.0.523",
-    "@remotion/transitions": "^4.0.523",
+    "@remotion/bundler": "4.0.523",
+    "@remotion/player": "4.0.523",
+    "@remotion/renderer": "4.0.523",
+    "@remotion/transitions": "4.0.523",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "lucide-react": "^1.43.0",
+    "multer": "^2.3.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "remotion": "^4.0.523"
+    "remotion": "4.0.523"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

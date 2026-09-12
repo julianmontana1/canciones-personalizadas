@@ -1,9 +1,21 @@
-import React from 'react';
-import { Music, ShieldCheck, Sparkles, User, ArrowLeft } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, User, ArrowLeft, Menu, X } from 'lucide-react';
 import Sparkle from './Sparkle';
+import BrandMark from './BrandMark';
 
-export default function Navbar({ currentView, onSelectView, isAdminAuthenticated }) {
+const NAV_LINKS = [
+  { id: 'hero', label: 'Inicio' },
+  { id: 'como-funciona', label: 'Cómo funciona' },
+  { id: 'estilos', label: 'Estilos' },
+  { id: 'ejemplos', label: 'Ejemplos' },
+  { id: 'precios', label: 'Precios' }
+];
+
+export default function Navbar({ currentView, onSelectView }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const scrollToSection = (id) => {
+    setIsMobileMenuOpen(false);
     if (currentView !== 'user') {
       onSelectView('user');
       setTimeout(() => {
@@ -29,18 +41,15 @@ export default function Navbar({ currentView, onSelectView, isAdminAuthenticated
           }}
         >
           <div className="relative">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-purple-600 via-pink-500 to-indigo-500 p-0.5 shadow-lg shadow-purple-500/25 group-hover:scale-105 transition-transform duration-300">
-              <div className="w-full h-full bg-[#0d1020] rounded-[10px] flex items-center justify-center">
-                <Music className="w-5 h-5 text-pink-400 group-hover:rotate-6 transition-transform" />
-              </div>
+            <div className="w-10 h-10 rounded-xl bg-[#140A1C] border border-[#2A1A3A] p-1.5 shadow-lg shadow-purple-500/25 group-hover:scale-105 transition-transform duration-300">
+              <BrandMark className="w-full h-full" />
             </div>
-            <Sparkle className="w-2.5 h-2.5 text-pink-300 absolute -top-1 -right-1" animation="animate-twinkle" />
           </div>
 
           <div>
             <div className="flex items-center space-x-1.5">
-              <span className="font-extrabold text-xl tracking-tight text-white">
-                Serenat<span className="bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">IA</span>
+              <span className="text-xl tracking-tight text-white">
+                <span className="font-bold">Serenat</span><span className="font-light">IA</span>
               </span>
               {currentView === 'admin' && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
@@ -55,41 +64,16 @@ export default function Navbar({ currentView, onSelectView, isAdminAuthenticated
         {/* Navigation Links (only shown in user view) */}
         {currentView === 'user' ? (
           <nav className="hidden lg:flex items-center space-x-7 text-sm font-medium text-gray-300">
-            <button
-              type="button"
-              onClick={() => scrollToSection('hero')}
-              className="hover:text-white transition-colors duration-200"
-            >
-              Inicio
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('como-funciona')}
-              className="hover:text-white transition-colors duration-200"
-            >
-              Cómo funciona
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('estilos')}
-              className="hover:text-white transition-colors duration-200"
-            >
-              Estilos
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('ejemplos')}
-              className="hover:text-white transition-colors duration-200"
-            >
-              Ejemplos
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollToSection('precios')}
-              className="hover:text-white transition-colors duration-200"
-            >
-              Precios
-            </button>
+            {NAV_LINKS.map((link) => (
+              <button
+                key={link.id}
+                type="button"
+                onClick={() => scrollToSection(link.id)}
+                className="hover:text-white transition-colors duration-200"
+              >
+                {link.label}
+              </button>
+            ))}
           </nav>
         ) : currentView === 'admin' ? (
           <div className="hidden sm:block text-xs text-gray-400 font-mono">
@@ -104,8 +88,10 @@ export default function Navbar({ currentView, onSelectView, isAdminAuthenticated
         {/* Action Buttons & View Switcher */}
         <div className="flex items-center space-x-3 flex-shrink-0">
           
-          {/* Prominent Superadmin View Switcher */}
-          {currentView === 'admin' ? (
+          {/* No entry point to the admin panel is shown on the user-facing side —
+              it's reached only via its own secret URL. This button only appears
+              once you're already inside it, to get back to the public app. */}
+          {currentView === 'admin' && (
             <button
               type="button"
               onClick={() => onSelectView('user')}
@@ -113,23 +99,6 @@ export default function Navbar({ currentView, onSelectView, isAdminAuthenticated
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Volver a la App</span>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onSelectView('admin')}
-              className={`px-2.5 sm:px-3.5 py-2 rounded-xl border text-xs sm:text-sm font-semibold transition-all flex items-center gap-0 sm:gap-2 shadow-sm ${
-                isAdminAuthenticated
-                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 hover:bg-amber-900/50'
-                  : 'bg-gray-900/80 border-gray-800 text-gray-300 hover:text-white hover:border-gray-700'
-              }`}
-              title="Ir al panel Superadmin"
-            >
-              <ShieldCheck className="w-4 h-4 text-amber-400" />
-              <span className="hidden sm:inline">Superadmin</span>
-              {isAdminAuthenticated && (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 ring-2 ring-emerald-950 animate-pulse ml-1.5 sm:ml-0" title="Sesión activa"></span>
-              )}
             </button>
           )}
 
@@ -145,9 +114,38 @@ export default function Navbar({ currentView, onSelectView, isAdminAuthenticated
             </button>
           )}
 
+          {/* Mobile menu toggle (only in user view, where the nav links live) */}
+          {currentView === 'user' && (
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              className="lg:hidden min-h-11 min-w-11 flex items-center justify-center rounded-xl border border-gray-800 bg-gray-900/80 text-gray-300 hover:text-white transition-all"
+              aria-label={isMobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={isMobileMenuOpen}
+            >
+              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          )}
+
         </div>
 
       </div>
+
+      {/* Mobile nav panel */}
+      {currentView === 'user' && isMobileMenuOpen && (
+        <nav className="lg:hidden border-t border-gray-800/80 bg-[#080a14]/95 backdrop-blur-xl px-4 py-2">
+          {NAV_LINKS.map((link) => (
+            <button
+              key={link.id}
+              type="button"
+              onClick={() => scrollToSection(link.id)}
+              className="w-full min-h-11 flex items-center text-left text-sm font-medium text-gray-300 hover:text-white transition-colors duration-200"
+            >
+              {link.label}
+            </button>
+          ))}
+        </nav>
+      )}
     </header>
   );
 }

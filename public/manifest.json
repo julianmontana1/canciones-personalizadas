@@ -1,0 +1,26 @@
+{
+  "name": "SerenatIA — Canciones Personalizadas",
+  "short_name": "SerenatIA",
+  "description": "Crea canciones personalizadas con inteligencia artificial para regalar o dedicar.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#0b0f19",
+  "background_color": "#0b0f19",
+  "orientation": "portrait-primary",
+  "lang": "es",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

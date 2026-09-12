@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Check, Edit2, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
-  Sparkles, Mic, Clock, Key, AlertTriangle, RefreshCw,
+  Sparkles, Mic, Clock, Key, AlertTriangle, RefreshCw, FileText,
   Play, Square, Mars, Venus, VenusAndMars, Shuffle, Wand2
 } from 'lucide-react';
 import Sparkle, { SparkleCluster } from './Sparkle';
@@ -37,7 +37,9 @@ export default function SongWizard({
   handleToggleGenrePreview,
   playingPreviewGenre,
   genrePresets = [],
-  durationPresets = []
+  durationPresets = [],
+  genreDemos = {},
+  onOpenGenreGuide
 }) {
   // Step 1: Dedicatoria (Nombres)
   // Step 2: Género Musical
@@ -48,10 +50,44 @@ export default function SongWizard({
   const genreSliderRef = useRef(null);
   const filteredGenrePresets = filterByMood(genrePresets, genreMood);
 
+  // The currently chosen genre's real demo (if one exists) — used to offer a
+  // concrete "how to write your story" example right where it matters, in
+  // Step 2 (genre) and Step 3 (story), not just on the marketing gallery.
+  const selectedGenrePreset = genrePresets.find((p) => p.name === style);
+  const selectedGenreDemo = selectedGenrePreset ? genreDemos[selectedGenrePreset.id] : null;
+
+  // Mobile-only dot pagination for the genre slider (prev/next arrows are
+  // hidden below `sm:`, so this is the only position feedback on a phone).
+  const [genrePage, setGenrePage] = useState(0);
+  const [genrePageCount, setGenrePageCount] = useState(1);
+
+  const updateGenrePageCount = () => {
+    const el = genreSliderRef.current;
+    if (!el || el.clientWidth === 0) return;
+    setGenrePageCount(Math.max(1, Math.ceil(el.scrollWidth / el.clientWidth)));
+  };
+
+  useEffect(() => {
+    updateGenrePageCount();
+    window.addEventListener('resize', updateGenrePageCount);
+    return () => window.removeEventListener('resize', updateGenrePageCount);
+  }, [filteredGenrePresets]);
+
+  const handleGenreScroll = () => {
+    const el = genreSliderRef.current;
+    if (!el || el.clientWidth === 0) return;
+    setGenrePage(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
   const scrollGenres = (direction) => {
     if (genreSliderRef.current) {
       genreSliderRef.current.scrollBy({ left: direction * 300, behavior: 'smooth' });
     }
+  };
+
+  const goToGenrePage = (page) => {
+    const el = genreSliderRef.current;
+    if (el) el.scrollTo({ left: page * el.clientWidth, behavior: 'smooth' });
   };
 
   const handleGenreMoodChange = (mood) => {
@@ -117,11 +153,15 @@ export default function SongWizard({
     }
   };
 
+  const [stepError, setStepError] = useState('');
+  useEffect(() => setStepError(''), [currentStep]);
+
   const handleNext = () => {
     if (currentStep === 1 && !names.trim()) {
-      alert('Por favor ingresa para quién es la canción');
+      setStepError('Por favor ingresa para quién es la canción');
       return;
     }
+    setStepError('');
     if (currentStep < 4) {
       setCurrentStep((prev) => prev + 1);
     } else {
@@ -131,6 +171,7 @@ export default function SongWizard({
   };
 
   const handleBack = () => {
+    setStepError('');
     if (currentStep > 1) {
       setCurrentStep((prev) => prev - 1);
     }
@@ -181,25 +222,29 @@ export default function SongWizard({
             <div
               key={stepNumber}
               onClick={() => setCurrentStep(stepNumber)}
-              className={`h-1.5 sm:h-2 rounded-full cursor-pointer transition-all duration-500 relative overflow-hidden ${
-                isActive || isPassed
-                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-sm shadow-pink-500/50'
-                  : 'bg-gray-800/80 hover:bg-gray-700'
-              }`}
+              className="py-4 -my-4 cursor-pointer"
             >
-              {isActive && (
-                <div className="absolute inset-0 bg-white/30 animate-pulse rounded-full" />
-              )}
+              <div
+                className={`h-1.5 sm:h-2 rounded-full transition-all duration-500 relative overflow-hidden ${
+                  isActive || isPassed
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 shadow-sm shadow-pink-500/50'
+                    : 'bg-gray-800/80 hover:bg-gray-700'
+                }`}
+              >
+                {isActive && (
+                  <div className="absolute inset-0 bg-white/30 animate-pulse rounded-full" />
+                )}
+              </div>
             </div>
           );
         })}
       </div>
 
       {/* Error Message if any */}
-      {error && (
+      {(stepError || error) && (
         <div className="mb-5 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2.5 text-rose-300 text-xs">
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-          <span>{error}</span>
+          <span>{stepError || error}</span>
         </div>
       )}
 
@@ -272,7 +317,7 @@ export default function SongWizard({
 
             <button
               type="button"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/60"
+              className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/60"
             >
               <Edit2 className="w-4 h-4" />
             </button>
@@ -330,6 +375,7 @@ export default function SongWizard({
 
               <div
                 ref={genreSliderRef}
+                onScroll={handleGenreScroll}
                 className="flex gap-3 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 -mx-1 px-1"
               >
                 {filteredGenrePresets.length === 0 && (
@@ -338,6 +384,7 @@ export default function SongWizard({
                 {filteredGenrePresets.map((preset) => {
                   const isPlaying = playingPreviewGenre === preset.id;
                   const isSelected = style === preset.name && !customStyle;
+                  const hasRealDemo = Boolean(genreDemos[preset.id]);
 
                   return (
                     <div
@@ -370,12 +417,12 @@ export default function SongWizard({
                         <button
                           type="button"
                           onClick={(e) => handleToggleGenrePreview(e, preset.id)}
-                          className={`p-1 rounded-lg border flex-shrink-0 transition-all ${
+                          className={`p-2 rounded-lg border flex-shrink-0 transition-all ${
                             isPlaying
                               ? 'bg-amber-500 text-gray-950 border-amber-400 animate-pulse'
                               : 'bg-black/40 text-amber-300 border-amber-500/30 hover:bg-amber-500/20'
                           }`}
-                          title="Escuchar muestra de instrumentos de 10 segundos"
+                          title={hasRealDemo ? 'Escuchar canción de ejemplo' : 'Escuchar muestra de instrumentos de 10 segundos'}
                         >
                           {isPlaying ? <Square className="w-3 h-3 fill-current" /> : <Play className="w-3 h-3 fill-current" />}
                         </button>
@@ -400,6 +447,37 @@ export default function SongWizard({
             </div>
 
             <p className="mt-2 text-[11px] text-gray-500 sm:hidden">Desliza para ver los estilos →</p>
+
+            {genrePageCount > 1 && (
+              <div className="flex sm:hidden items-center justify-center gap-1 mt-1">
+                {Array.from({ length: genrePageCount }).map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => goToGenrePage(i)}
+                    className="p-2 -m-1"
+                    aria-label={`Ir a la página ${i + 1} de estilos`}
+                  >
+                    <span
+                      className={`block h-1.5 rounded-full transition-all ${
+                        i === genrePage ? 'w-6 bg-gradient-to-r from-purple-500 to-pink-500' : 'w-1.5 bg-gray-700'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {selectedGenreDemo && !customStyle && (
+              <button
+                type="button"
+                onClick={() => onOpenGenreGuide?.(selectedGenrePreset)}
+                className="mt-3 w-full min-h-11 flex items-center justify-center gap-1.5 px-3 rounded-xl border border-purple-500/30 bg-purple-950/20 text-purple-300 hover:bg-purple-500/10 text-xs font-semibold transition-all"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Ver guía de creación de {selectedGenrePreset.name}</span>
+              </button>
+            )}
 
             {/* Custom style free input */}
             <div className="mt-4 pt-3 border-t border-gray-800/60">
@@ -450,7 +528,7 @@ export default function SongWizard({
 
             <button
               type="button"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/60"
+              className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/60"
             >
               <Edit2 className="w-4 h-4" />
             </button>
@@ -499,6 +577,10 @@ export default function SongWizard({
             <textarea
               value={references}
               onChange={(e) => setReferences(e.target.value)}
+              onFocus={(e) => {
+                const target = e.target;
+                setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+              }}
               rows={4}
               placeholder="Ej: Nos conocimos en la universidad bajo la lluvia. Siempre toma café frío. Le encantan los viajes a la playa y su perro Rocky. Quiero decirle que gracias por estar en mis momentos más difíciles..."
               className="w-full px-4 py-3 bg-[#0d1020] border border-gray-700/80 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-pink-500 focus:ring-1 focus:ring-pink-500 transition-all resize-none"
@@ -525,6 +607,17 @@ export default function SongWizard({
                   className="text-[11px] text-gray-400 hover:text-white underline underline-offset-2 transition-colors"
                 >
                   Deshacer
+                </button>
+              )}
+
+              {selectedGenreDemo && (
+                <button
+                  type="button"
+                  onClick={() => onOpenGenreGuide?.(selectedGenrePreset)}
+                  className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1.5 rounded-lg bg-purple-950/30 border border-purple-500/30 text-purple-300 hover:bg-purple-500/10 transition-all"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>Ver ejemplo de historia</span>
                 </button>
               )}
 
@@ -590,7 +683,7 @@ export default function SongWizard({
 
             <button
               type="button"
-              className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/60"
+              className="min-h-11 min-w-11 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800/60"
             >
               <Edit2 className="w-4 h-4" />
             </button>
@@ -631,6 +724,11 @@ export default function SongWizard({
                   </button>
                 ))}
               </div>
+              {codeInfo?.valid && durationPresets.length < 6 && (
+                <p className="mt-2 text-[11px] text-gray-500">
+                  Tu código permite hasta {codeInfo.maxDurationSec}s — elige un plan mayor para más duración.
+                </p>
+              )}
             </div>
 
             {/* Voice gender selector */}
@@ -665,6 +763,9 @@ export default function SongWizard({
                   );
                 })}
               </div>
+              <p className="mt-2 text-[11px] text-gray-500">
+                Masculina/Femenina: una sola voz protagonista · Ambas voces: dueto alternando estrofas · Cualquiera: la IA elige la que mejor encaje con el estilo.
+              </p>
             </div>
 
             {/* Access Code Box */}
@@ -686,6 +787,10 @@ export default function SongWizard({
                   type="text"
                   value={accessCode}
                   onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                  onFocus={(e) => {
+                    const target = e.target;
+                    setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300);
+                  }}
                   placeholder="Ej: TEST-1SONG-7A9B"
                   className="w-full px-3.5 py-2.5 bg-gray-900 border border-gray-700 rounded-xl text-xs sm:text-sm text-white font-mono uppercase tracking-wider focus:outline-none focus:border-purple-500"
                 />
@@ -710,9 +815,9 @@ export default function SongWizard({
               <div className="mt-2.5 pt-2 border-t border-gray-800/60 flex flex-wrap items-center gap-1.5 text-[11px]">
                 <span className="text-gray-400 text-[10px]">Prueba con:</span>
                 {[
-                  { label: '1 Canción', code: 'TEST-1SONG-7A9B' },
-                  { label: '5 Canciones', code: 'VIP-5SONGS-K3M8' },
-                  { label: 'Ilimitado', code: 'MASTER-UNLIMITED-PRO' }
+                  { label: 'Solo', code: 'TEST-1SONG-7A9B' },
+                  { label: 'Pack 3', code: 'DEMO-PACK3-9F2C' },
+                  { label: 'Pack 5', code: 'DEMO-PACK5-7R1L' }
                 ].map((c) => (
                   <button
                     key={c.code}

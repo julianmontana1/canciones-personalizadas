@@ -25,7 +25,11 @@ const NARRATIVE_DIRECTION = {
 
   urbano: 'Que las frases sean cortas, con actitud y mucho ritmo, fáciles de repetir. Convierte esos detalles en imágenes potentes en vez de explicarlos. Que el coro sea un gancho pegajoso que se quede en la cabeza y que incluya su nombre para que quede claro para quién es.',
 
-  nostalgico: 'Que la letra sea sencilla, íntima y con pocas palabras, como un pensamiento en voz baja. Toma esos detalles y conviértelos en imágenes tranquilas y nostálgicas, sin exagerar la emoción. Que el nombre aparezca en el coro de forma suave, casi como un recuerdo.'
+  nostalgico: 'Que la letra sea sencilla, íntima y con pocas palabras, como un pensamiento en voz baja. Toma esos detalles y conviértelos en imágenes tranquilas y nostálgicas, sin exagerar la emoción. Que el nombre aparezca en el coro de forma suave, casi como un recuerdo.',
+
+  corporativo: 'Cuenta esto con energía y orgullo: los logros, el trabajo en equipo y lo que representa esta empresa o marca. Usa un lenguaje claro y memorable, casi como un eslogan que se pueda repetir fácilmente, y que el coro repita el nombre de la empresa o del homenajeado para que quede clarísimo de quién se trata.',
+
+  navidad: 'Cuenta esto con la calidez de una Nochebuena en familia: los recuerdos, la unión y la gratitud de estar juntos en esta época. Usa detalles concretos de esos momentos especiales, y que el coro repita su nombre con cariño navideño, como cuando toda la familia canta junta alrededor del árbol.'
 };
 
 // Generic direction for free-text styles that don't resolve to a curated genre.

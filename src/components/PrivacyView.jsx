@@ -27,6 +27,7 @@ export default function PrivacyView({ onNavigate }) {
           <li><strong className="text-white">Código de acceso:</strong> el código que ingresas para generar tu canción.</li>
           <li><strong className="text-white">Datos del homenajeado:</strong> nombres, historia, anécdotas, estilo musical y duración que proporcionas voluntariamente en el formulario.</li>
           <li><strong className="text-white">Datos técnicos:</strong> dirección IP y marca de tiempo de la generación, usados únicamente para seguridad, prevención de abuso y soporte.</li>
+          <li><strong className="text-white">Fotos y videos para el creador de video:</strong> si usas la función de crear un video con tu canción, las fotos y/o clips de video que subas se procesan únicamente para generar ese video, y se eliminan de nuestro servidor de forma automática e inmediata en cuanto el video termina de generarse.</li>
         </ul>
         <p>
           SerenatIA no procesa pagos ni almacena datos de tarjetas o cuentas bancarias dentro de la
@@ -72,6 +73,13 @@ export default function PrivacyView({ onNavigate }) {
           archivo de audio) por un plazo razonable, con fines de soporte, atención de reclamos y
           prevención de fraude. Puedes solicitar la eliminación de tus datos en cualquier momento
           escribiéndonos, salvo que la ley nos exija conservarlos por más tiempo.
+        </p>
+        <p>
+          El video generado con tus fotos (si usaste esa función) se conserva en nuestro servidor
+          durante <strong className="text-white">14 días</strong> desde su creación, para que puedas
+          reproducirlo y descargarlo cuantas veces quieras dentro de ese plazo. Pasados los 14 días, el
+          archivo de video se elimina automáticamente. Las fotos y videos originales que subiste para
+          crearlo no esperan ese plazo: se eliminan de inmediato, apenas el video termina de generarse.
         </p>
       </LegalSection>
 

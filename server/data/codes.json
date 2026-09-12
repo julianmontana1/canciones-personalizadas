@@ -1,22 +1,41 @@
 [
   {
     "code": "TEST-1SONG-7A9B",
+    "plan": "solo",
     "maxSongs": 1,
     "used": 0,
-    "label": "Prueba 1 Canción",
+    "label": "Plan Solo · 1 Canción",
     "createdAt": "2026-09-08T23:42:00.000Z"
   },
   {
     "code": "VIP-5SONGS-K3M8",
+    "plan": null,
     "maxSongs": 5,
     "used": 0,
     "label": "Paquete VIP 5 Canciones",
     "createdAt": "2026-09-08T23:42:00.000Z"
   },
   {
+    "code": "DEMO-PACK3-9F2C",
+    "plan": "trio",
+    "maxSongs": 3,
+    "used": 0,
+    "label": "Pack 3 Canciones",
+    "createdAt": "2026-09-11T00:00:00.000Z"
+  },
+  {
+    "code": "DEMO-PACK5-7R1L",
+    "plan": "quinteto",
+    "maxSongs": 5,
+    "used": 0,
+    "label": "Pack 5 Canciones",
+    "createdAt": "2026-09-11T00:00:00.000Z"
+  },
+  {
     "code": "MASTER-UNLIMITED-PRO",
+    "plan": null,
     "maxSongs": -1,
-    "used": 9,
+    "used": 12,
     "label": "Superadmin Personal Ilimitado",
     "createdAt": "2026-09-08T23:42:00.000Z"
   }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollText, ShieldCheck, Sparkles, Music2, Ban, KeyRound, Mail, Scale, ListChecks } from 'lucide-react';
+import { ScrollText, ShieldCheck, Sparkles, Music2, Ban, KeyRound, Mail, Scale, ListChecks, Video } from 'lucide-react';
 import LegalLayout, { LegalSection } from './legal/LegalLayout';
 
 export default function TermsView({ onNavigate }) {
@@ -14,8 +14,7 @@ export default function TermsView({ onNavigate }) {
       <LegalSection icon={ScrollText} title="1. Identificación del proveedor">
         <p>
           SerenatIA es un servicio de creación de canciones personalizadas mediante inteligencia
-          artificial, operado por <strong className="text-white">[Nombre legal de tu empresa o persona
-          natural, NIT/Cédula]</strong>. Contacto: soporte@serenatia.com.
+          artificial, operado por <strong className="text-white">Serenatia online INC</strong>. Contacto: soporte@serenatia.com.
         </p>
       </LegalSection>
 
@@ -72,8 +71,21 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 5. Propiedad intelectual */}
-      <LegalSection icon={ShieldCheck} title="5. Propiedad intelectual" accent="text-indigo-400">
+      {/* 5. Creación de video con fotos y videos personalizados */}
+      <LegalSection icon={Video} title="5. Creación de video con fotos y videos personalizados" accent="text-pink-400">
+        <p>
+          En los planes que lo incluyen (Pack 3 y Pack 5 canciones), puedes generar además un video
+          vertical con tus propias fotos y/o clips de video, sincronizado con la letra de tu canción.
+        </p>
+        <ul className="list-disc list-inside space-y-1.5 pl-1 marker:text-pink-400">
+          <li>Las fotos y videos que subas para esta función se usan <strong className="text-white">únicamente</strong> para generar tu video. Una vez el video termina de generarse, esos archivos originales se eliminan automáticamente de nuestro servidor.</li>
+          <li>El video generado queda disponible para reproducir y descargar en nuestro sitio durante <strong className="text-white">14 días</strong> desde su creación. Pasado ese plazo, se elimina automáticamente de nuestro servidor.</li>
+          <li>Te recomendamos descargar tu video antes de que termine ese plazo. Si lo necesitas después de eliminado, deberás generarlo nuevamente (sujeto al cupo y límites de tu plan).</li>
+        </ul>
+      </LegalSection>
+
+      {/* 6. Propiedad intelectual */}
+      <LegalSection icon={ShieldCheck} title="6. Propiedad intelectual" accent="text-indigo-400">
         <p>
           La tecnología, los algoritmos, el sistema de generación y todos los procesos utilizados para
           crear las canciones son propiedad exclusiva de SerenatIA. El cliente no adquiere ningún
@@ -92,8 +104,8 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 6. Acceso y códigos */}
-      <LegalSection icon={KeyRound} title="6. Acceso y códigos de uso" accent="text-emerald-400">
+      {/* 7. Acceso y códigos */}
+      <LegalSection icon={KeyRound} title="7. Acceso y códigos de uso" accent="text-emerald-400">
         <ul className="list-disc list-inside space-y-1.5 pl-1 marker:text-emerald-400">
           <li>Cada código tiene un número determinado de canciones disponibles según el plan comprado.</li>
           <li>El código es de uso personal: compartirlo, revenderlo o transferirlo a terceros puede resultar en su desactivación.</li>
@@ -101,8 +113,8 @@ export default function TermsView({ onNavigate }) {
         </ul>
       </LegalSection>
 
-      {/* 7. Uso aceptable */}
-      <LegalSection icon={Ban} title="7. Uso aceptable y contenido prohibido" accent="text-rose-400">
+      {/* 8. Uso aceptable */}
+      <LegalSection icon={Ban} title="8. Uso aceptable y contenido prohibido" accent="text-rose-400">
         <p>Al usar SerenatIA, el cliente se compromete a no incluir en su solicitud:</p>
         <ul className="list-disc list-inside space-y-1.5 pl-1 marker:text-rose-400">
           <li>Lenguaje ofensivo, discriminatorio, difamatorio o de odio.</li>
@@ -116,8 +128,8 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 8. Reembolsos (pointer to dedicated page) */}
-      <LegalSection icon={ScrollText} title="8. Reclamos y reembolsos">
+      {/* 9. Reembolsos (pointer to dedicated page) */}
+      <LegalSection icon={ScrollText} title="9. Reclamos y reembolsos">
         <p>
           Por ser un producto digital de bajo costo y entrega inmediata, SerenatIA no realiza
           devoluciones de dinero. Ante un reclamo válido, la única solución disponible es un reintento
@@ -128,8 +140,8 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 9. Limitación de responsabilidad */}
-      <LegalSection icon={ScrollText} title="9. Limitación de responsabilidad">
+      {/* 10. Limitación de responsabilidad */}
+      <LegalSection icon={ScrollText} title="10. Limitación de responsabilidad">
         <p>
           El servicio se ofrece "tal cual" ("as is"). SerenatIA no garantiza que el resultado generado
           sea perfecto o esté libre de imperfecciones propias de un proceso de creación automatizada por
@@ -139,8 +151,8 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 10. Ley aplicable */}
-      <LegalSection icon={Scale} title="10. Ley aplicable y jurisdicción" accent="text-sky-400">
+      {/* 11. Ley aplicable */}
+      <LegalSection icon={Scale} title="11. Ley aplicable y jurisdicción" accent="text-sky-400">
         <p>
           Estos Términos se rigen por las leyes de la República de Colombia, incluyendo la Ley 1480 de
           2011 (Estatuto del Consumidor). Cualquier disputa será sometida a las autoridades y jueces
@@ -149,8 +161,8 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 11. Modificaciones */}
-      <LegalSection icon={ScrollText} title="11. Modificaciones">
+      {/* 12. Modificaciones */}
+      <LegalSection icon={ScrollText} title="12. Modificaciones">
         <p>
           SerenatIA puede actualizar estos Términos y Condiciones en cualquier momento. Los cambios
           entran en vigor desde su publicación en esta página. El uso continuado del servicio implica
@@ -158,8 +170,8 @@ export default function TermsView({ onNavigate }) {
         </p>
       </LegalSection>
 
-      {/* 12. Contacto */}
-      <LegalSection icon={Mail} title="12. Contacto">
+      {/* 13. Contacto */}
+      <LegalSection icon={Mail} title="13. Contacto">
         <p>
           Si tienes preguntas sobre estos términos o quieres reportar un problema con tu canción,
           escríbenos a <span className="text-purple-300 font-medium">soporte@serenatia.com</span> o por

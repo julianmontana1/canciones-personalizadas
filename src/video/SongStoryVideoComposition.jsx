@@ -3,13 +3,21 @@ import {
   AbsoluteFill,
   Audio,
   Img,
+  OffthreadVideo,
+  Sequence,
   interpolate,
   useCurrentFrame,
   useVideoConfig
 } from 'remotion';
 
 export const SongStoryVideoComposition = ({
-  photos = [],
+  // A single, ordered timeline the customer arranges themselves — each entry is
+  // either a photo or a video clip, in whatever order they dragged them into.
+  // Shape: { type: 'photo', src, durationFrames } | { type: 'video', src,
+  // durationFrames, trimBeforeFrames, trimAfterFrames }. If it doesn't fill the
+  // whole song, the entire sequence loops back to its first item — not just the
+  // photos — until the song ends.
+  mediaItems = [],
   audioUrl = '',
   title = 'Para Camila con amor',
   subtitle = 'Balada Romántica · Canción Oficial',
@@ -18,45 +26,57 @@ export const SongStoryVideoComposition = ({
   isExporting = false
 }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames, fps } = useVideoConfig();
+  const { durationInFrames, fps, width } = useVideoConfig();
+  // Everything below is authored in absolute pixels against a 1080x1920 canvas.
+  // Rather than rewrite every value for each output resolution, the whole thing
+  // renders at that reference size and scales down (or up) to fit whatever the
+  // actual composition width is — 720p today, 1080p in the live preview.
+  const REFERENCE_WIDTH = 1080;
+  const REFERENCE_HEIGHT = 1920;
+  const designScale = width / REFERENCE_WIDTH;
   const currentMs = (frame / fps) * 1000;
 
-  // Ensure at least one fallback image if none provided
-  const validPhotos = photos.length > 0 ? photos : ['/images/hero-vocalista.avif'];
-  const photoCount = validPhotos.length;
-  const framesPerPhoto = Math.max(30, Math.floor(durationInFrames / photoCount));
+  const validItems = mediaItems.filter((it) => it && it.src && it.durationFrames > 0);
+  const totalCycleFrames = validItems.reduce((sum, it) => sum + it.durationFrames, 0);
+  const frameInCycle = totalCycleFrames > 0 ? frame % totalCycleFrames : 0;
 
-  // Determine current active photo and next photo for smooth crossfade
-  const currentPhotoIndex = Math.min(
-    photoCount - 1,
-    Math.floor(frame / framesPerPhoto)
-  );
-  const nextPhotoIndex = (currentPhotoIndex + 1) % photoCount;
+  let currentIndex = 0;
+  let cumulativeFrames = 0;
+  for (let i = 0; i < validItems.length; i++) {
+    if (frameInCycle < cumulativeFrames + validItems[i].durationFrames) {
+      currentIndex = i;
+      break;
+    }
+    cumulativeFrames += validItems[i].durationFrames;
+  }
+  const currentItem = validItems[currentIndex];
+  const itemDuration = currentItem?.durationFrames || 30;
+  const frameInItem = frameInCycle - cumulativeFrames;
 
-  // Frame offset within the current photo's duration
-  const frameInPhoto = frame % framesPerPhoto;
+  // How many times the whole sequence needs to repeat to fill the song — video
+  // items need one <Sequence> per repetition (they carry their own internal
+  // clock), unlike photos, which are just conditionally shown based on the
+  // computed `currentItem` above.
+  const repeatCount = totalCycleFrames > 0 ? Math.ceil(durationInFrames / totalCycleFrames) : 1;
 
-  // Crossfade transition in the last 20 frames of each photo
-  const transitionFrames = 20;
-  const isTransitioning = frameInPhoto >= framesPerPhoto - transitionFrames && photoCount > 1;
-  const crossfadeOpacity = isTransitioning
-    ? interpolate(
-        frameInPhoto,
-        [framesPerPhoto - transitionFrames, framesPerPhoto],
-        [0, 1],
-        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-      )
-    : 0;
-
-  // Ken Burns zoom effect: slow zoom from 1.0 to 1.12
+  // Ken Burns zoom effect: slow zoom from 1.0 to 1.12 (photos only)
   const currentZoom = interpolate(
-    frameInPhoto,
-    [0, framesPerPhoto],
+    frameInItem,
+    [0, itemDuration],
     [1.0, 1.12],
     { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
   );
 
-  const nextZoom = 1.0;
+  // Each item's start offset within a single cycle — used to place every
+  // repetition's video <Sequence>s at the right absolute frame.
+  const itemStartInCycle = [];
+  {
+    let running = 0;
+    for (const it of validItems) {
+      itemStartInCycle.push(running);
+      running += it.durationFrames;
+    }
+  }
 
   // =========================================================================
   // CLEAN KARAOKE LYRICS (ONE SHORT PHRASE AT A TIME, NO PROMPTS / NO CLUTTER)
@@ -141,37 +161,61 @@ export const SongStoryVideoComposition = ({
   });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: '#070913', fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-      
-      {/* 1. Background Photo Slideshow with Ken Burns & Crossfade */}
+    <AbsoluteFill style={{ backgroundColor: '#070913' }}>
+    <div
+      style={{
+        position: 'relative',
+        width: REFERENCE_WIDTH,
+        height: REFERENCE_HEIGHT,
+        // AbsoluteFill (the parent here) is a flex column container by default —
+        // without flexShrink:0 this div gets shrunk to fit it *before* the scale
+        // transform below ever applies, squashing the whole design upward.
+        flexShrink: 0,
+        transform: `scale(${designScale})`,
+        transformOrigin: 'top left',
+        fontFamily: 'system-ui, -apple-system, sans-serif'
+      }}
+    >
+      {/* 1. The customer's own ordered timeline of photos + video clips, looping
+          as a whole (not just the photos) if it doesn't fill the whole song. */}
       <AbsoluteFill style={{ overflow: 'hidden' }}>
-        {/* Current Photo */}
-        <Img
-          src={validPhotos[currentPhotoIndex]}
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            transform: `scale(${currentZoom})`,
-            transition: 'transform 0.1s linear'
-          }}
-        />
-
-        {/* Next Photo crossfading in */}
-        {isTransitioning && (
+        {/* Current photo, with Ken Burns zoom — only rendered while a photo is
+            the active item; videos take over this frame window via the
+            <Sequence>s below instead. */}
+        {currentItem?.type === 'photo' && (
           <Img
-            src={validPhotos[nextPhotoIndex]}
+            src={currentItem.src}
             style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              opacity: crossfadeOpacity,
-              transform: `scale(${nextZoom})`
+              transform: `scale(${currentZoom})`,
+              transition: 'transform 0.1s linear'
             }}
           />
+        )}
+
+        {/* Every video item needs its own <Sequence> per repetition of the
+            cycle, since OffthreadVideo tracks its own internal clock off the
+            absolute frame — a single element can't represent it looping. */}
+        {Array.from({ length: repeatCount }).map((_, rep) =>
+          validItems.map((item, i) => {
+            if (item.type !== 'video') return null;
+            const absoluteStart = rep * totalCycleFrames + itemStartInCycle[i];
+            if (absoluteStart >= durationInFrames) return null;
+            const clippedDuration = Math.min(item.durationFrames, durationInFrames - absoluteStart);
+            return (
+              <Sequence key={`${rep}-${i}`} from={absoluteStart} durationInFrames={clippedDuration}>
+                <OffthreadVideo
+                  src={item.src}
+                  muted
+                  trimBefore={item.trimBeforeFrames || 0}
+                  trimAfter={item.trimAfterFrames}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </Sequence>
+            );
+          })
         )}
       </AbsoluteFill>
 
@@ -411,6 +455,7 @@ export const SongStoryVideoComposition = ({
       {/* Audio sync */}
       {audioUrl && !isExporting && <Audio src={audioUrl} />}
 
+    </div>
     </AbsoluteFill>
   );
 };

@@ -107,13 +107,10 @@ solo a `127.0.0.1`. El acceso público se hace mediante Cloudflare Tunnel.
 
 ---
 
-## 🔑 Códigos de prueba
+## 🔑 Códigos de acceso
 
-| Código | Límite |
-| :--- | :--- |
-| `TEST-1SONG-7A9B` | 1 canción |
-| `VIP-5SONGS-K3M8` | 5 canciones |
-| `MASTER-UNLIMITED-PRO` | Ilimitado |
+Los códigos de acceso se crean y gestionan desde el panel de Superadmin.
+Consulta al administrador para obtener uno.
 
 ---
 

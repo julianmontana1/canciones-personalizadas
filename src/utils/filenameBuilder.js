@@ -54,10 +54,16 @@ const formatDateSlug = (timestamp) => {
   return `${month}${date.getDate()}`;
 };
 
-export const buildSongFilename = (song) => {
+const buildBaseFilename = (song) => {
   const name = extractFirstName(song?.names);
   const genre = extractGenreSlug(song?.style);
   const duration = parseInt(song?.duration, 10) || 0;
   const dateSlug = formatDateSlug(song?.timestamp);
-  return `${name}-${genre}-${duration}-seg-${dateSlug}.mp3`;
+  return `${name}-${genre}-${duration}-seg-${dateSlug}`;
 };
+
+export const buildSongFilename = (song) => `${buildBaseFilename(song)}.mp3`;
+
+// Same naming as the MP3 (e.g. "julian-salsa-90-seg-sep10.mp4") so a customer's
+// audio and video downloads are recognizable as belonging to the same song.
+export const buildVideoFilename = (song) => `${buildBaseFilename(song)}.mp4`;

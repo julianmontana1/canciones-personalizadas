@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ErrorBoundary from './components/ErrorBoundary';
 import Navbar from './components/Navbar';
 import UserView from './components/UserView';
 import AdminView from './components/AdminView';
@@ -13,19 +14,24 @@ const LEGAL_VIEWS = {
   '#/privacidad': 'privacy'
 };
 
+// Deliberately not "#/admin" — this is the only way into the admin panel,
+// with no button or link anywhere in the user-facing app. Keep it out of
+// public docs/screenshots; change it here if it ever needs to be rotated.
+const ADMIN_HASH = '#/PaneldeControl';
+
 const resolveViewFromHash = () => {
-  if (window.location.hash === '#/admin') return 'admin';
+  if (window.location.hash === ADMIN_HASH) return 'admin';
   return LEGAL_VIEWS[window.location.hash] || 'user';
 };
 
 export default function App() {
   const [currentView, setCurrentView] = useState(() => resolveViewFromHash()); // 'user' | 'admin' | 'terms'
   const [adminKey, setAdminKey] = useState(() => sessionStorage.getItem('el_admin_key') || '');
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => window.location.hash === '#/admin' && !sessionStorage.getItem('el_admin_key'));
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(() => window.location.hash === ADMIN_HASH && !sessionStorage.getItem('el_admin_key'));
 
   useEffect(() => {
     const handleHashChange = () => {
-      if (window.location.hash === '#/admin') {
+      if (window.location.hash === ADMIN_HASH) {
         if (!sessionStorage.getItem('el_admin_key')) {
           setIsLoginModalOpen(true);
         } else {
@@ -39,8 +45,6 @@ export default function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
-  const isAdminAuthenticated = Boolean(adminKey);
-
   // Legal pages (Términos/Reembolsos/Privacidad) all navigate between each other and
   // back home purely through the hash — the hashchange listener above picks it up.
   const navigateLegal = (hash) => {
@@ -49,7 +53,7 @@ export default function App() {
 
   const handleSelectView = (view) => {
     if (view === 'admin') {
-      window.location.hash = '#/admin';
+      window.location.hash = ADMIN_HASH;
     } else {
       window.location.hash = '';
       setCurrentView('user');
@@ -71,6 +75,7 @@ export default function App() {
   };
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen flex flex-col bg-[#080c16] text-gray-100 selection:bg-purple-500 selection:text-white">
       {/* Dynamic ambient lights */}
       <div className="fixed top-0 left-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl pointer-events-none -z-10" />
@@ -80,7 +85,6 @@ export default function App() {
       <Navbar
         currentView={currentView}
         onSelectView={handleSelectView}
-        isAdminAuthenticated={isAdminAuthenticated}
       />
 
       {/* Main Content Area */}
@@ -117,5 +121,6 @@ export default function App() {
         </footer>
       )}
     </div>
+    </ErrorBoundary>
   );
 }

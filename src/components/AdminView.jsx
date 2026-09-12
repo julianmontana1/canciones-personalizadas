@@ -3,8 +3,23 @@ import {
   ShieldCheck, RefreshCw, Search, Download, Trash2, Play, Pause,
   Clock, Globe, Music, Key, FileAudio, AlertCircle, Copy, Check,
   LogOut, ArrowLeft, Settings, Users, PlusCircle, CheckCircle2, Lock,
-  Zap, Heart, Moon, Cake, FlaskConical, Gauge
+  Zap, Heart, Moon, Cake, FlaskConical, Gauge, SlidersHorizontal, RotateCcw,
+  Layers, PlayCircle
 } from 'lucide-react';
+import { PLANS as FACTORY_PLANS } from '../plans.js';
+import { GENRE_PRESETS } from '../data/genrePresets.js';
+
+// Labels & help text for the admin-editable per-plan limits. Order here drives
+// render order in the "Límites de Planes" tab.
+const PLAN_LIMIT_FIELDS = [
+  { key: 'songs', label: 'Canciones incluidas', help: 'Cuántas canciones puede crear un código de este plan.' },
+  { key: 'maxPhotos', label: 'Fotos máx. por video', help: 'Fotos que se pueden subir en una sola creación de video.' },
+  { key: 'maxVideoClips', label: 'Clips de video máx. por video', help: 'Videos propios que se pueden subir como material en una sola creación de video.' },
+  { key: 'maxVideoProjects', label: 'Videos que se pueden crear (por cuenta)', help: 'Total de videos terminados que un código puede crear en toda su cuenta, repartidos entre las canciones que elija.' },
+  { key: 'maxUploadBytesMB', label: 'Peso máx. combinado (MB)', help: 'Suma máxima de fotos + videos subidos en una sola creación de video.' }
+];
+
+const PLAN_ORDER = ['solo', 'trio', 'quinteto'];
 
 // Fixed demo scripts used to measure ElevenLabs credit consumption per genre/duration.
 const DEMOS = [
@@ -40,6 +55,59 @@ const DEMOS = [
   }
 ];
 
+// One QA demo per genre in the "Explora Estilos" gallery — a quick way to hear
+// how the current prompt-building logic (genreProfiles.js) sounds across every
+// style at once, not just the 3 curated public ones above. Built from the same
+// GENRE_PRESETS list the public gallery uses, so it never drifts out of sync.
+const GENRE_DEMO_CONTENT = {
+  dormir: { names: 'Sofía', references: 'Sofía tiene 2 años y cada noche le cuesta conciliar el sueño después de un día lleno de energía jugando con sus bloques de colores y su peluche conejo llamado "Copito". Su mamá quiere una nana suave que hable de las estrellas que la cuidan, del conejito que también se va a dormir, y que termine repitiendo su nombre bajito como arrullo final.' },
+  infantil: { names: 'los niños del salón de Kínder B', references: 'Es la fiesta de fin de año del salón de Kínder B: hay globos de colores, piñata, y todos los niños quieren bailar y saltar. Quiero una canción súper animada y pegajosa que invite a moverse, aplaudir y girar en círculo, con un coro fácil de repetir para que hasta los más pequeños lo canten.' },
+  cumpleanosinfantil: { names: 'Valentina, que cumple 5 años', references: 'Valentina cumple 5 años y quiere una fiesta con torta de unicornio, globos rosados y muchos amigos del colegio. Quiero una canción de cumpleaños bien alegre, con su nombre repetido en el coro, que hable de soplar las velitas y pedir un deseo, con un ritmo bailable para que todos los niños bailen alrededor de la torta.' },
+  infantilclasica: { names: 'los nietos de la abuela Rosario', references: 'La abuela Rosario quiere cantarles a sus nietos una canción con ese estilo clásico y tierno de toda la vida, como las que ella escuchaba de pequeña. Que hable de jugar en el parque, de la merienda de las cuatro, y de lo mucho que los quiere, con un tono educativo y cariñoso, fácil de tararear.' },
+  infantilmoderna: { names: 'Mateo, de 7 años', references: 'Mateo tiene 7 años y le encantan los videojuegos, los superhéroes y bailar canciones pegajosas con sus amigos. Quiero una canción infantil con ritmo actual y moderno, divertida y con energía, que hable de ser valiente como su superhéroe favorito y de jugar sin parar toda la tarde.' },
+  rondas: { names: 'los niños del jardín "Arcoíris"', references: 'En el jardín infantil "Arcoíris" quieren una ronda nueva para cantar en círculo tomados de la mano, como las de toda la vida pero con una historia propia: un sol que se levanta, animalitos que saludan, y un final donde todos aplauden y se ríen juntos.' },
+  cumpleanos: { names: 'Don Alberto, que cumple 60 años', references: 'Don Alberto cumple 60 años y toda su familia se reunió para celebrarlo con una parrillada en el patio de su casa. Es un hombre alegre al que le gusta bailar y contar chistes. Quiero una canción de cumpleaños festiva que invite a bailar, que agradezca su ejemplo de vida, y repita su nombre en el coro con mucha alegría.' },
+  banda: { names: 'el ingeniero Fernando', references: 'Fernando acaba de graduarse como ingeniero después de años de sacrificio, madrugando entre el trabajo y la universidad. Su familia quiere sorprenderlo con una canción de banda potente, con trompetas y tambora desde el primer segundo, que hable de su esfuerzo, de las noches sin dormir, y que invite a todos a brindar y bailar por su logro.' },
+  salsa: { names: 'Julián y Daniela', references: 'Julián y Daniela se conocieron bailando salsa en una fiesta de barrio hace un año y desde entonces no han dejado de bailar juntos cada fin de semana. Quiero una salsa brava con trompetas vivas y piano montuno, que cuente esa química en la pista de baile y termine invitando a todos a bailar pegados al ritmo.' },
+  salsarosa: { names: 'Camila', references: 'Después de tres años de novios, quiero dedicarle a Camila una salsa romántica y suave que hable de lo que ha significado tenerla a mi lado: sus abrazos después de un mal día, sus risas contagiosas, y las ganas de seguir construyendo una vida juntos. Que sea dulce pero bailable, ideal para un baile lento de pareja.' },
+  mariachi: { names: 'Doña Guadalupe', references: 'Doña Guadalupe cumple 50 años de casada con el amor de su vida y su familia quiere sorprenderla con un mariachi tradicional, con trompetas y violines, que hable de una vida entera de amor, de las canas que ganaron juntos, y de lo orgullosos que están sus hijos de ese ejemplo.' },
+  vallenato: { names: 'Andrés', references: 'Andrés se va a ir a vivir a otra ciudad por trabajo y quiere despedirse de sus amigos de toda la vida con un vallenato que cuente las parrandas, los cuentos hasta el amanecer, y la promesa de que la amistad sigue igual de fuerte aunque la distancia los separe. Que tenga acordeón protagonista y una historia bien contada, como debe ser un vallenato.' },
+  carranga: { names: 'el profesor Hernán, que se jubila', references: 'El profesor Hernán se jubila después de 30 años enseñando en la escuela veredal. Sus antiguos alumnos, ya adultos, quieren regalarle una carranga alegre con guitarra campesina y guacharaca que hable de su paciencia, de todo lo que les enseñó, y de la huella que dejó en el pueblo.' },
+  cumbia: { names: 'la familia Ramírez en su reunión anual', references: 'Cada año la familia Ramírez se reúne en la finca de la abuela para bailar y comer sancocho hasta tarde. Quiero una cumbia sabrosa con acordeón y ritmo tropical que hable de esas reuniones, del sancocho al fogón, y que invite a todos —chiquitos y grandes— a salir a bailar en la mitad del patio.' },
+  balada: { names: 'Laura', references: 'Quiero dedicarle a Laura, mi esposa, una balada emotiva por nuestro décimo aniversario de bodas. Que hable de cómo empezamos con casi nada y construimos una familia juntos, de las noches difíciles en las que ella nunca me soltó la mano, y de las ganas de seguir envejeciendo a su lado. Piano acústico y cuerdas, muy sentida.' },
+  bolero: { names: 'Doña Elena', references: 'Doña Elena perdió a su esposo hace un año después de 45 años de matrimonio. Sus hijos quieren regalarle un bolero nostálgico con guitarra requinto que hable de un amor que sigue vivo en el recuerdo, de los bailes en la sala de la casa, y del consuelo de saber que ese amor no se olvida.' },
+  bachata: { names: 'Diego y Valentina', references: 'Diego conoció a Valentina en un viaje a la playa y desde ese fin de semana no ha dejado de pensar en ella. Quiero una bachata romántica e íntima, con guitarra dominicana, que cuente ese flechazo repentino, las ganas de volver a verla, y la invitación a bailar bachata pegados esta vez.' },
+  pop: { names: 'Camila, que se gradúa de la universidad', references: 'Camila se gradúa esta semana después de cinco años de esfuerzo, trabajando y estudiando al mismo tiempo. Su familia quiere un pop latino moderno, melódico y pegadizo, que celebre su disciplina, sus ganas de comerse el mundo, y que suene como el inicio de un nuevo capítulo lleno de posibilidades.' },
+  acustico: { names: 'Sebastián', references: 'Sebastián quiere pedirle matrimonio a su novia de 6 años este fin de semana y quiere una canción acústica íntima, solo guitarra de palo y voz cálida, que cuente su historia desde el primer café que compartieron hasta hoy, terminando con la pregunta "¿te casas conmigo?" en el último verso.' },
+  reggaeton: { names: 'el grupo de amigas para su viaje a la playa', references: 'Un grupo de seis amigas se va de viaje a la playa para celebrar que todas terminaron sus estudios. Quieren un reggaetón bailable y con actitud, dembow marcado, que hable de disfrutar sin reglas, de la amistad de años, y que suene perfecto para bailar en la arena con las luces del atardecer.' },
+  reggae: { names: 'Tomás, antes de un viaje largo', references: 'Tomás se va de viaje varios meses a recorrer el mundo antes de empezar a trabajar. Quiere un reggae relajado con bajo profundo y sabor caribeño que hable de libertad, de dejar el estrés atrás, y de disfrutar cada momento del camino sin apuro.' },
+  rock: { names: 'la banda de garaje "Los Nocturnos"', references: 'Cuatro amigos llevan tocando juntos desde el colegio en una banda de garaje llamada "Los Nocturnos" y por fin van a tocar en su primer bar. Quieren un rock con guitarras eléctricas potentes y batería viva que hable de nunca rendirse, de ensayar hasta tarde en el garaje, y de perseguir el sueño de subirse a un escenario.' },
+  rap: { names: 'Kevin, que superó momentos difíciles', references: 'Kevin viene de un barrio difícil y logró salir adelante estudiando de noche mientras trabajaba de día. Quiere un rap con flow y actitud, beats boom-bap, que cuente su historia de superación, las caídas de las que se levantó, y el orgullo de ver hoy a su familia con la cabeza en alto.' },
+  lofi: { names: 'Ana, en sus noches de estudio', references: 'Ana estudia medicina y pasa largas noches despierta preparando exámenes. Quiere una canción lo-fi relajada y nostálgica, estilo vinilo, que le acompañe esas noches de estudio, hablando de la calma antes de un gran esfuerzo y la promesa de que todo ese sacrificio va a valer la pena.' },
+  electronica: { names: 'el equipo de la startup, el día que cerraron su primera inversión', references: 'Un pequeño equipo de cinco personas lleva dos años construyendo su startup desde un apartamento y hoy cerraron su primera ronda de inversión. Quieren una canción electrónica enérgica, con sintetizadores que suban de intensidad, que celebre ese logro y la energía de seguir soñando en grande.' },
+  jinglecorporativo: { names: 'Panadería "El Buen Trigo"', references: 'La panadería familiar "El Buen Trigo" cumple 20 años en el barrio y quiere un jingle corporativo pegajoso y profesional para usar en sus redes sociales, que hable del pan recién horneado cada madrugada, del cariño con que atienden a los vecinos de siempre, y que termine repitiendo el nombre del negocio de forma memorable.' },
+  villancico: { names: 'la familia Torres en su primera Navidad en la casa nueva', references: 'La familia Torres estrena casa nueva y quiere celebrar su primera Navidad ahí reunidos con abuelos, tíos y primos. Quieren un villancico cálido y festivo, con esa alegría tradicional decembrina, que hable de la familia reunida alrededor del árbol, del olor a natilla y buñuelos, y de agradecer estar todos juntos.' }
+};
+
+const GENRE_DEMO_DURATION_SEC = 60;
+
+const MOOD_ACCENT_CLASS = {
+  infantil: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
+  celebracion: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+  amor: 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+};
+
+const GENRE_DEMOS = GENRE_PRESETS.map((g) => ({
+  id: g.id,
+  label: g.name,
+  icon: g.icon,
+  accentClass: MOOD_ACCENT_CLASS[g.mood] || MOOD_ACCENT_CLASS.celebracion,
+  style: g.name,
+  names: GENRE_DEMO_CONTENT[g.id]?.names || g.name,
+  references: GENRE_DEMO_CONTENT[g.id]?.references || `Una canción de muestra en el estilo "${g.name}".`,
+  duration: GENRE_DEMO_DURATION_SEC
+}));
+
 const COOLDOWN_MS = 5 * 60 * 1000;
 
 export default function AdminView({ adminKey, onLogout, onBackToUser }) {
@@ -62,6 +130,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
   const [newCodeName, setNewCodeName] = useState('');
   const [newCodeLabel, setNewCodeLabel] = useState('');
   const [newCodeMaxSongs, setNewCodeMaxSongs] = useState('5');
+  const [newCodePlan, setNewCodePlan] = useState('solo');
   const [codeSuccessMsg, setCodeSuccessMsg] = useState('');
 
   // Settings state
@@ -71,6 +140,14 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
   const [settingsSuccessMsg, setSettingsSuccessMsg] = useState('');
   const [settingsError, setSettingsError] = useState('');
 
+  // Plan limits state (per account type: solo/trio/quinteto)
+  const [effectivePlans, setEffectivePlans] = useState(null); // live from server, or null while loading
+  const [planEdits, setPlanEdits] = useState({}); // { [planKey]: { songs, maxPhotos, maxVideoClips, maxVideoProjects, maxUploadBytesMB } }
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false);
+  const [savingPlanKey, setSavingPlanKey] = useState(null);
+  const [planSuccessMsg, setPlanSuccessMsg] = useState('');
+  const [planError, setPlanError] = useState('');
+
   // Quota state
   const [quota, setQuota] = useState(null);
   const [isLoadingQuota, setIsLoadingQuota] = useState(false);
@@ -78,8 +155,10 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
 
   // Demos state
   const [demoStates, setDemoStates] = useState({}); // { [demoId]: { loading, result, error } }
-  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [cooldowns, setCooldowns] = useState({}); // { [demoId]: timestamp } — per-demo, not global, now that there are 30
   const [now, setNow] = useState(Date.now());
+  const [isBatchRunning, setIsBatchRunning] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({ done: 0, total: 0 });
 
   // Initial loads
   useEffect(() => {
@@ -87,6 +166,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
     fetchCodes();
     fetchSettings();
     fetchQuota();
+    fetchPlans();
 
     const audio = audioRef.current;
     const handleEnded = () => setIsPlaying(false);
@@ -98,12 +178,12 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
     };
   }, [adminKey]);
 
-  // Cooldown ticker (only runs while a cooldown is active)
+  // Cooldown ticker (only runs while at least one demo's cooldown is active)
   useEffect(() => {
-    if (cooldownUntil <= Date.now()) return;
+    if (!Object.values(cooldowns).some((until) => until > Date.now())) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
-  }, [cooldownUntil]);
+  }, [cooldowns]);
 
   // Fetch History
   const fetchHistory = async () => {
@@ -155,6 +235,123 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Turns a plan's effective (bytes-based) limits into the editable draft shape
+  // this tab's inputs use — same fields, but maxUploadBytes shown/edited in MB.
+  const draftFromPlan = (plan) => ({
+    songs: String(plan.songs ?? ''),
+    maxPhotos: String(plan.maxPhotos ?? ''),
+    maxVideoClips: String(plan.maxVideoClips ?? ''),
+    maxVideoProjects: String(plan.maxVideoProjects ?? ''),
+    maxUploadBytesMB: String(Math.round((plan.maxUploadBytes ?? 0) / (1024 * 1024)))
+  });
+
+  // Fetch Plan Limits (factory defaults merged with any admin overrides)
+  const fetchPlans = async () => {
+    setIsLoadingPlans(true);
+    try {
+      const res = await fetch('/api/admin/plans', {
+        headers: { 'x-admin-key': adminKey }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setEffectivePlans(data.plans);
+        const drafts = {};
+        for (const key of PLAN_ORDER) {
+          if (data.plans[key]) drafts[key] = draftFromPlan(data.plans[key]);
+        }
+        setPlanEdits(drafts);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoadingPlans(false);
+    }
+  };
+
+  const handlePlanFieldChange = (planKey, field, value) => {
+    setPlanEdits((prev) => ({
+      ...prev,
+      [planKey]: { ...prev[planKey], [field]: value }
+    }));
+  };
+
+  // Save one plan's edited limits
+  const handleSavePlan = async (planKey) => {
+    setPlanSuccessMsg('');
+    setPlanError('');
+    setSavingPlanKey(planKey);
+
+    const draft = planEdits[planKey] || {};
+    const patch = {
+      songs: parseInt(draft.songs, 10),
+      maxPhotos: parseInt(draft.maxPhotos, 10),
+      maxVideoClips: parseInt(draft.maxVideoClips, 10),
+      maxVideoProjects: parseInt(draft.maxVideoProjects, 10),
+      maxUploadBytes: Math.round((parseFloat(draft.maxUploadBytesMB) || 0) * 1024 * 1024)
+    };
+
+    if (Object.values(patch).some((v) => !Number.isFinite(v) || v < 0)) {
+      setPlanError('Todos los valores deben ser números válidos y no negativos.');
+      setSavingPlanKey(null);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey
+        },
+        body: JSON.stringify({ planKey, patch })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEffectivePlans(data.plans);
+        setPlanEdits((prev) => ({ ...prev, [planKey]: draftFromPlan(data.plans[planKey]) }));
+        setPlanSuccessMsg(`¡Límites de "${data.plans[planKey].label}" actualizados!`);
+        setTimeout(() => setPlanSuccessMsg(''), 4000);
+      } else {
+        setPlanError(data.error || 'Error al guardar los límites.');
+      }
+    } catch (err) {
+      setPlanError('Error al contactar con el servidor.');
+    } finally {
+      setSavingPlanKey(null);
+    }
+  };
+
+  // Reset one plan's limits back to the hardcoded factory defaults
+  const handleResetPlan = async (planKey) => {
+    if (!window.confirm(`¿Restablecer "${FACTORY_PLANS[planKey]?.label}" a sus valores de fábrica?`)) return;
+    setPlanSuccessMsg('');
+    setPlanError('');
+    setSavingPlanKey(planKey);
+    try {
+      const res = await fetch('/api/admin/plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-key': adminKey
+        },
+        body: JSON.stringify({ planKey, reset: true })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEffectivePlans(data.plans);
+        setPlanEdits((prev) => ({ ...prev, [planKey]: draftFromPlan(data.plans[planKey]) }));
+        setPlanSuccessMsg(`"${data.plans[planKey].label}" restablecido a valores de fábrica.`);
+        setTimeout(() => setPlanSuccessMsg(''), 4000);
+      } else {
+        setPlanError(data.error || 'Error al restablecer.');
+      }
+    } catch (err) {
+      setPlanError('Error al contactar con el servidor.');
+    } finally {
+      setSavingPlanKey(null);
     }
   };
 
@@ -210,7 +407,8 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         body: JSON.stringify({
           code: newCodeName,
           label: newCodeLabel,
-          maxSongs: parseInt(newCodeMaxSongs, 10)
+          maxSongs: parseInt(newCodeMaxSongs, 10),
+          plan: newCodePlan === 'custom' ? null : newCodePlan
         })
       });
 
@@ -313,10 +511,13 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
     }
   };
 
-  // Generate a demo song
-  const handleGenerateDemo = async (demo) => {
-    if (now < cooldownUntil) return;
-
+  // Actually calls the generation endpoint and updates state for one demo —
+  // shared by the manual per-demo button and the "Generar todos" batch runner
+  // below. The batch runner deliberately does NOT wait out each demo's own
+  // cooldown between calls (that cooldown exists so a human reviewing results
+  // one at a time doesn't accidentally re-trigger the same one, not to pace a
+  // deliberate batch run) — it still sets the cooldown afterward though.
+  const generateOneDemo = async (demo) => {
     setDemoStates((prev) => ({
       ...prev,
       [demo.id]: { ...(prev[demo.id] || {}), loading: true, error: '' }
@@ -344,8 +545,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
           ...prev,
           [demo.id]: { loading: false, error: '', result: data }
         }));
-        const until = Date.now() + COOLDOWN_MS;
-        setCooldownUntil(until);
+        setCooldowns((prev) => ({ ...prev, [demo.id]: Date.now() + COOLDOWN_MS }));
         setNow(Date.now());
         fetchHistory();
         fetchQuota();
@@ -361,6 +561,108 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         [demo.id]: { loading: false, error: 'Error de conexión con el servidor', result: prev[demo.id]?.result }
       }));
     }
+  };
+
+  // Manual single-click generation — respects that demo's own cooldown
+  const handleGenerateDemo = async (demo) => {
+    if (now < (cooldowns[demo.id] || 0) || isBatchRunning) return;
+    await generateOneDemo(demo);
+  };
+
+  // Sequentially generates every genre demo that doesn't already have a result
+  // in this session, with a short pause between calls so requests don't pile up
+  // back-to-back — not a hard rate limit, just good manners toward the API.
+  const handleGenerateAllGenreDemos = async () => {
+    if (isBatchRunning) return;
+    const pending = GENRE_DEMOS.filter((d) => !demoStates[d.id]?.result);
+    if (pending.length === 0) return;
+
+    setIsBatchRunning(true);
+    setBatchProgress({ done: 0, total: pending.length });
+
+    for (const demo of pending) {
+      await generateOneDemo(demo);
+      setBatchProgress((prev) => ({ ...prev, done: prev.done + 1 }));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+    }
+
+    setIsBatchRunning(false);
+  };
+
+  // One demo card — shared by the 3 public demos and the per-genre QA demos,
+  // which only differ in how `icon` is shaped (a lucide component vs. an emoji).
+  const renderDemoCard = (demo) => {
+    const state = demoStates[demo.id] || {};
+    const isDisabled = state.loading || now < (cooldowns[demo.id] || 0) || isBatchRunning;
+
+    return (
+      <div key={demo.id} className="glass-panel rounded-2xl border border-gray-800 p-5 flex flex-col gap-4">
+        <div className="flex items-center gap-2.5">
+          <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${demo.accentClass}`}>
+            {typeof demo.icon === 'string' ? <span className="text-lg">{demo.icon}</span> : <demo.icon className="w-5 h-5" />}
+          </div>
+          <div>
+            <div className="text-sm font-bold text-white">{demo.label}</div>
+            <div className="text-[11px] text-gray-400">{demo.style} • {demo.duration}s</div>
+          </div>
+        </div>
+
+        <div className="text-[11px] text-gray-400 bg-gray-950 border border-gray-800 rounded-xl p-3 space-y-1.5">
+          <div><span className="text-gray-500">Para:</span> <span className="text-gray-200">{demo.names}</span></div>
+          <div><span className="text-gray-500">Historia enviada:</span> <span className="text-gray-300">{demo.references}</span></div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleGenerateDemo(demo)}
+          disabled={isDisabled}
+          className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all ${
+            isDisabled
+              ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+              : 'bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white shadow-md'
+          }`}
+        >
+          {state.loading ? 'Generando en ElevenLabs...' : now < (cooldowns[demo.id] || 0) ? `Espera ${Math.ceil(((cooldowns[demo.id] || 0) - now) / 1000)}s...` : 'Generar Demo'}
+        </button>
+
+        {state.error && (
+          <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>{state.error}</span>
+          </div>
+        )}
+
+        {state.result && (
+          <div className="space-y-2.5 pt-2 border-t border-gray-800">
+            <audio controls src={state.result.song.audioUrl} className="w-full h-9" />
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="p-2 rounded-lg bg-gray-950 border border-gray-800">
+                <div className="text-[9px] uppercase text-gray-500">Antes</div>
+                <div className="text-xs font-bold text-gray-300">{state.result.quotaBefore?.used?.toLocaleString('es-CO') ?? '—'}</div>
+              </div>
+              <div className="p-2 rounded-lg bg-gray-950 border border-gray-800">
+                <div className="text-[9px] uppercase text-gray-500">Después</div>
+                <div className="text-xs font-bold text-gray-300">{state.result.quotaAfter?.used?.toLocaleString('es-CO') ?? '—'}</div>
+              </div>
+              <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/40">
+                <div className="text-[9px] uppercase text-emerald-500">Consumidos</div>
+                <div className="text-xs font-bold text-emerald-300">
+                  {state.result.creditsUsed != null ? state.result.creditsUsed.toLocaleString('es-CO') : '—'}
+                </div>
+              </div>
+            </div>
+            <a
+              href={state.result.song.audioUrl}
+              download={state.result.song.filename}
+              className="flex items-center justify-center gap-2 py-1.5 text-[11px] text-emerald-400 hover:text-emerald-200"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Descargar MP3</span>
+            </a>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const copyToClipboard = (text, id) => {
@@ -440,11 +742,11 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
       </div>
 
       {/* Navigation Tabs in Superadmin */}
-      <div className="flex items-center gap-2 border-b border-gray-800 pb-1">
+      <div className="flex items-center gap-2 border-b border-gray-800 pb-1 overflow-x-auto flex-nowrap">
         <button
           type="button"
           onClick={() => setActiveTab('audit')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
             activeTab === 'audit'
               ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm'
               : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900'
@@ -457,7 +759,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         <button
           type="button"
           onClick={() => setActiveTab('codes')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
             activeTab === 'codes'
               ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm'
               : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900'
@@ -470,7 +772,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         <button
           type="button"
           onClick={() => setActiveTab('demos')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
             activeTab === 'demos'
               ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm'
               : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900'
@@ -483,7 +785,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         <button
           type="button"
           onClick={() => setActiveTab('settings')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
             activeTab === 'settings'
               ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm'
               : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900'
@@ -491,6 +793,19 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
         >
           <Settings className="w-4 h-4" />
           <span>Configuración & API Key</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('plans')}
+          className={`flex-shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+            activeTab === 'plans'
+              ? 'bg-amber-500/20 border border-amber-500/40 text-amber-300 shadow-sm'
+              : 'text-gray-400 hover:text-gray-200 hover:bg-gray-900'
+          }`}
+        >
+          <SlidersHorizontal className="w-4 h-4" />
+          <span>Límites de Planes</span>
         </button>
       </div>
 
@@ -560,7 +875,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
           </div>
 
           {/* History Table */}
-          <div className="glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+          <div className="relative glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs sm:text-sm">
                 <thead className="bg-gray-900/90 text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800">
@@ -698,6 +1013,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
                 </tbody>
               </table>
             </div>
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0b0f19] to-transparent pointer-events-none" />
           </div>
         </div>
       )}
@@ -712,7 +1028,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
               <span>Crear Nuevo Código de Acceso</span>
             </h3>
             <p className="text-xs text-gray-400 mb-4">
-              Genera códigos para tus clientes o pruebas con un límite específico de canciones (1, 5 o ilimitado).
+              Genera códigos para tus clientes según el plan que compraron — cada plan trae su propio límite de duración, acceso a video y fotos.
             </p>
 
             {codeSuccessMsg && (
@@ -722,7 +1038,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
               </div>
             )}
 
-            <form onSubmit={handleCreateCode} className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+            <form onSubmit={handleCreateCode} className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1">
                   Código
@@ -762,19 +1078,41 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
 
               <div>
                 <label className="block text-xs font-semibold text-gray-300 mb-1">
-                  Límite de Canciones
+                  Plan
                 </label>
                 <select
-                  value={newCodeMaxSongs}
-                  onChange={(e) => setNewCodeMaxSongs(e.target.value)}
+                  value={newCodePlan}
+                  onChange={(e) => setNewCodePlan(e.target.value)}
                   className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
                 >
-                  <option value="1">1 canción (Prueba)</option>
-                  <option value="3">3 canciones</option>
-                  <option value="5">5 canciones (Pack Estándar)</option>
-                  <option value="10">10 canciones</option>
-                  <option value="-1">♾️ Ilimitado (Personal)</option>
+                  <option value="solo">Solo · 1 canción, sin video, 2 min</option>
+                  <option value="trio">Pack 3 · 1 video con hasta 3 fotos, 3 min</option>
+                  <option value="quinteto">Pack 5 · 2 videos con hasta 5 fotos/clips, 4 min</option>
+                  <option value="custom">Personalizado / Ilimitado</option>
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-300 mb-1">
+                  Límite de Canciones
+                </label>
+                {newCodePlan === 'custom' ? (
+                  <select
+                    value={newCodeMaxSongs}
+                    onChange={(e) => setNewCodeMaxSongs(e.target.value)}
+                    className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
+                  >
+                    <option value="1">1 canción (Prueba)</option>
+                    <option value="3">3 canciones</option>
+                    <option value="5">5 canciones</option>
+                    <option value="10">10 canciones</option>
+                    <option value="-1">♾️ Ilimitado (Personal)</option>
+                  </select>
+                ) : (
+                  <div className="w-full px-3 py-2 bg-gray-900 border border-gray-800 rounded-xl text-xs text-gray-400">
+                    {(effectivePlans || FACTORY_PLANS)[newCodePlan].songs} canción{(effectivePlans || FACTORY_PLANS)[newCodePlan].songs > 1 ? 'es' : ''} (definido por el plan — editable en "Límites de Planes")
+                  </div>
+                )}
               </div>
 
               <button
@@ -787,7 +1125,7 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
           </div>
 
           {/* Codes Table */}
-          <div className="glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
+          <div className="relative glass-panel rounded-2xl border border-gray-800 overflow-hidden shadow-xl">
             <div className="p-4 border-b border-gray-800 flex items-center justify-between">
               <h4 className="text-sm font-bold text-white">Códigos Activos en el Sistema</h4>
               <button
@@ -800,11 +1138,13 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
               </button>
             </div>
 
-            <table className="w-full text-left text-xs sm:text-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs sm:text-sm">
               <thead className="bg-gray-900/90 text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800">
                 <tr>
                   <th className="py-3.5 px-4 font-semibold">Código</th>
                   <th className="py-3.5 px-4 font-semibold">Etiqueta / Descripción</th>
+                  <th className="py-3.5 px-4 font-semibold">Plan</th>
                   <th className="py-3.5 px-4 font-semibold">Uso / Límite</th>
                   <th className="py-3.5 px-4 font-semibold">Estado</th>
                   <th className="py-3.5 px-4 font-semibold text-right">Acción</th>
@@ -832,6 +1172,18 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
 
                       <td className="py-3.5 px-4 text-white font-medium">
                         {c.label || '-'}
+                      </td>
+
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        {c.plan && FACTORY_PLANS[c.plan] ? (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/20 font-semibold">
+                            {(effectivePlans || FACTORY_PLANS)[c.plan].label}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-700/30 text-gray-400 border border-gray-600/30 font-semibold">
+                            Personalizado
+                          </span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 whitespace-nowrap">
@@ -880,105 +1232,70 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
                   );
                 })}
               </tbody>
-            </table>
+              </table>
+            </div>
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0b0f19] to-transparent pointer-events-none" />
           </div>
         </div>
       )}
 
       {/* TAB: DEMOS & MEDICIÓN DE CONSUMO */}
       {activeTab === 'demos' && (
-        <div className="space-y-6">
-          <div className="glass-panel p-5 rounded-2xl border border-gray-800 flex items-start gap-3">
-            <Zap className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-bold text-white">Genera 1 demo a la vez, con 5 minutos de espera entre cada una</h3>
-              <p className="text-xs text-gray-400 mt-1">
-                Cada botón queda bloqueado 5 minutos después de generar una demo, para que puedas revisar el consumo exacto en tu
-                panel de ElevenLabs antes de la siguiente. Los créditos "Antes/Después" que ves aquí vienen de la cuota real de tu cuenta.
-              </p>
-              {now < cooldownUntil && (
-                <p className="text-xs font-semibold text-amber-300 mt-2">
-                  ⏳ Próxima demo disponible en {Math.floor((cooldownUntil - now) / 60000)}:{String(Math.floor(((cooldownUntil - now) % 60000) / 1000)).padStart(2, '0')}
+        <div className="space-y-8">
+          <div>
+            <div className="glass-panel p-5 rounded-2xl border border-gray-800 flex items-start gap-3 mb-4">
+              <Zap className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-bold text-white">Demos Públicas (Muestras Reales)</h3>
+                <p className="text-xs text-gray-400 mt-1">
+                  Las 3 que se muestran en la sección "Muestras Reales" de la página principal. Cada botón queda bloqueado 5
+                  minutos después de generar, para revisar el consumo exacto en tu panel de ElevenLabs antes de la siguiente.
                 </p>
-              )}
+              </div>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {DEMOS.map((demo) => renderDemoCard(demo))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {DEMOS.map((demo) => {
-              const state = demoStates[demo.id] || {};
-              const Icon = demo.icon;
-              const isDisabled = state.loading || now < cooldownUntil;
-
-              return (
-                <div key={demo.id} className="glass-panel rounded-2xl border border-gray-800 p-5 flex flex-col gap-4">
-                  <div className="flex items-center gap-2.5">
-                    <div className={`w-10 h-10 rounded-xl border flex items-center justify-center ${demo.accentClass}`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-sm font-bold text-white">{demo.label}</div>
-                      <div className="text-[11px] text-gray-400">{demo.style} • {demo.duration}s</div>
-                    </div>
-                  </div>
-
-                  <div className="text-[11px] text-gray-400 bg-gray-950 border border-gray-800 rounded-xl p-3 space-y-1.5">
-                    <div><span className="text-gray-500">Para:</span> <span className="text-gray-200">{demo.names}</span></div>
-                    <div><span className="text-gray-500">Historia enviada:</span> <span className="text-gray-300">{demo.references}</span></div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleGenerateDemo(demo)}
-                    disabled={isDisabled}
-                    className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all ${
-                      isDisabled
-                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                        : 'bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white shadow-md'
-                    }`}
-                  >
-                    {state.loading ? 'Generando en ElevenLabs...' : 'Generar Demo'}
-                  </button>
-
-                  {state.error && (
-                    <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[11px] flex items-center gap-2">
-                      <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span>{state.error}</span>
-                    </div>
-                  )}
-
-                  {state.result && (
-                    <div className="space-y-2.5 pt-2 border-t border-gray-800">
-                      <audio controls src={state.result.song.audioUrl} className="w-full h-9" />
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="p-2 rounded-lg bg-gray-950 border border-gray-800">
-                          <div className="text-[9px] uppercase text-gray-500">Antes</div>
-                          <div className="text-xs font-bold text-gray-300">{state.result.quotaBefore?.used?.toLocaleString('es-CO') ?? '—'}</div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-gray-950 border border-gray-800">
-                          <div className="text-[9px] uppercase text-gray-500">Después</div>
-                          <div className="text-xs font-bold text-gray-300">{state.result.quotaAfter?.used?.toLocaleString('es-CO') ?? '—'}</div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-emerald-950/40 border border-emerald-800/40">
-                          <div className="text-[9px] uppercase text-emerald-500">Consumidos</div>
-                          <div className="text-xs font-bold text-emerald-300">
-                            {state.result.creditsUsed != null ? state.result.creditsUsed.toLocaleString('es-CO') : '—'}
-                          </div>
-                        </div>
-                      </div>
-                      <a
-                        href={state.result.song.audioUrl}
-                        download={state.result.song.filename}
-                        className="flex items-center justify-center gap-2 py-1.5 text-[11px] text-emerald-400 hover:text-emerald-200"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Descargar MP3</span>
-                      </a>
-                    </div>
+          <div>
+            <div className="glass-panel p-5 rounded-2xl border border-gray-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+              <div className="flex items-start gap-3">
+                <Layers className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-sm font-bold text-white">Demos por Género ({GENRE_DEMOS.length} estilos)</h3>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Una demo de QA por cada estilo de "Explora Estilos", para escuchar cómo suena el motor de prompts actual en
+                    todos los géneros de una vez. No son públicas — solo para revisar calidad aquí.
+                  </p>
+                  {isBatchRunning && (
+                    <p className="text-xs font-semibold text-amber-300 mt-2">
+                      ⏳ Generando {batchProgress.done}/{batchProgress.total}...
+                    </p>
                   )}
                 </div>
-              );
-            })}
+              </div>
+              <button
+                type="button"
+                onClick={handleGenerateAllGenreDemos}
+                disabled={isBatchRunning}
+                className={`flex-shrink-0 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
+                  isBatchRunning
+                    ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white shadow-md'
+                }`}
+              >
+                {isBatchRunning ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <PlayCircle className="w-3.5 h-3.5" />
+                )}
+                <span>{isBatchRunning ? `Generando (${batchProgress.done}/${batchProgress.total})` : 'Generar todos los géneros'}</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+              {GENRE_DEMOS.map((demo) => renderDemoCard(demo))}
+            </div>
           </div>
         </div>
       )}
@@ -1132,6 +1449,109 @@ export default function AdminView({ adminKey, onLogout, onBackToUser }) {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* TAB 4: PLAN LIMITS (songs, photos, video clips, videos that can be created — per account type) */}
+      {activeTab === 'plans' && (
+        <div className="max-w-4xl space-y-6">
+          <div>
+            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <SlidersHorizontal className="w-5 h-5 text-amber-400" />
+              <span>Límites por Tipo de Cuenta</span>
+            </h3>
+            <p className="text-xs text-gray-400 mt-1">
+              Ajusta cuántas canciones, fotos y videos incluye cada plan, y cuántos videos terminados puede crear un
+              código en total (repartidos entre las canciones que elija). Los cambios aplican de inmediato a los códigos
+              existentes de ese plan — nunca se le quita a una canción ya generada lo que ya tenía.
+            </p>
+          </div>
+
+          {planSuccessMsg && (
+            <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>{planSuccessMsg}</span>
+            </div>
+          )}
+          {planError && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4" />
+              <span>{planError}</span>
+            </div>
+          )}
+
+          {isLoadingPlans && !effectivePlans ? (
+            <p className="text-xs text-gray-500">Cargando límites de planes...</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {PLAN_ORDER.map((planKey) => {
+                const plan = effectivePlans?.[planKey];
+                const draft = planEdits[planKey];
+                if (!plan || !draft) return null;
+                const isSaving = savingPlanKey === planKey;
+                const factory = FACTORY_PLANS[planKey];
+                const isOverridden = PLAN_LIMIT_FIELDS.some(({ key }) =>
+                  key === 'maxUploadBytesMB'
+                    ? plan.maxUploadBytes !== factory.maxUploadBytes
+                    : plan[key] !== factory[key]
+                );
+
+                return (
+                  <div key={planKey} className="glass-panel p-5 rounded-3xl border border-gray-800 shadow-xl space-y-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="text-sm font-bold text-white">{plan.label}</h4>
+                        <p className="text-[11px] text-gray-500 mt-0.5">Plan: {planKey}</p>
+                      </div>
+                      {isOverridden && (
+                        <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/20 flex-shrink-0">
+                          Editado
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="space-y-3">
+                      {PLAN_LIMIT_FIELDS.map(({ key, label, help }) => (
+                        <div key={key}>
+                          <label className="block text-[11px] font-semibold text-gray-300 mb-1" title={help}>
+                            {label}
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            value={draft[key]}
+                            onChange={(e) => handlePlanFieldChange(planKey, key, e.target.value)}
+                            className="w-full px-3 py-2 bg-gray-950 border border-gray-700 rounded-xl text-xs text-white focus:outline-none focus:border-amber-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSavePlan(planKey)}
+                        disabled={isSaving}
+                        className="flex-1 py-2.5 bg-gradient-to-r from-amber-500 to-rose-600 hover:from-amber-400 hover:to-rose-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-1.5"
+                      >
+                        {isSaving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        <span>Guardar</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleResetPlan(planKey)}
+                        disabled={isSaving || !isOverridden}
+                        title="Restablecer a valores de fábrica"
+                        className="px-3 py-2.5 bg-gray-900 hover:bg-gray-800 border border-gray-700 text-gray-300 hover:text-white rounded-xl transition-all disabled:opacity-30"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

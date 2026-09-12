@@ -328,6 +328,32 @@ const GENRE_PROFILES = {
     ambience: 'a festival at night: white-noise risers, downlifters after the drop, and a huge crowd cheering as the drop hits',
     production: 'festival-ready electronic production, massive stereo width, punchy and energetic with controlled dynamics',
     avoid: 'acoustic folk instruments, live orchestra, lo-fi textures, slow tempo'
+  },
+
+  jingleCorporativo: {
+    label: 'corporate jingle (upbeat brand/company anthem)',
+    aliases: ['jingle corporativo', 'jingle empresarial', 'cancion corporativa', 'himno corporativo', 'jingle'],
+    narrative: 'corporativo',
+    instruments: 'a punchy corporate-pop bed: clean strummed electric guitar, bright synth plucks carrying the hook, a tight modern drum groove with crisp claps on the backbeat, a rounded synth bass, and a confident brass-stab accent underlining the chorus',
+    tempo: 'upbeat, confident tempo around 118 BPM, energetic but polished',
+    vocals: 'a bright, confident, clearly-enunciated lead voice with an optimistic advertisement-jingle energy, professional and upbeat',
+    backing: 'a small group of enthusiastic voices joining in unison on the hook/slogan line, like a company team chanting a motto together',
+    ambience: 'a brief warm round of office applause at the end, otherwise a clean, polished studio space with no other background noise',
+    production: 'clean, bright, polished corporate/advertisement production, radio-jingle ready with a punchy and memorable hook',
+    avoid: 'dark or melancholic mood, distortion, slow ballad tempo, aggressive or heavy genres'
+  },
+
+  villancico: {
+    label: 'villancico navideño (traditional Spanish-language Christmas carol)',
+    aliases: ['villancico', 'navideno', 'cancion de navidad', 'christmas carol', 'navidad'],
+    narrative: 'navidad',
+    instruments: 'sleigh bells keeping a bright festive pulse, a warm acoustic guitar strumming simple chords, a glockenspiel doubling the melody, a cozy string section swelling into the chorus, a soft handbell choir accenting the hook, and light hand percussion (tambourine, pandereta) for a festive lift',
+    tempo: 'warm, moderate tempo around 100 BPM with a festive, swaying feel',
+    vocals: 'a warm, joyful lead voice full of Christmas cheer, inviting the whole family to sing along',
+    backing: 'a full choir joining in rich harmony on the chorus, like family and friends gathered close and singing together',
+    ambience: 'sleigh bells jingling, a crackling fireplace, and the faint warm murmur of a family gathered close on a quiet winter night',
+    production: 'warm, festive, classic Christmas-carol production, rich and cozy, radio-ready holiday warmth',
+    avoid: 'dark or somber mood, aggressive drums, EDM synths, distortion'
   }
 };
 
