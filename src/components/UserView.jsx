@@ -154,12 +154,21 @@ export default function UserView() {
     }
   });
 
-  // Unified list of all creations (combining local storage & backend code history)
+  // Unified list of all creations for the CURRENTLY ACTIVE code — combines the
+  // server's own history for this code (myCodeSongs, always authoritative) with
+  // the local device cache, but only the cache entries that were actually made
+  // with this same code. Without that filter, switching from one code to another
+  // on the same device would keep showing the previous code's songs here, even
+  // though this code itself has never generated any (a real bug: the "N
+  // canciones creadas" badge didn't match the admin panel's per-code usage).
+  const isSameCode = (song) =>
+    Boolean(song?.code && accessCode && song.code.toUpperCase() === accessCode.toUpperCase());
+
   const allCreations = (() => {
     const map = new Map();
-    localSongs.forEach((s) => { if (s?.id) map.set(s.id, s); });
+    localSongs.filter(isSameCode).forEach((s) => { if (s?.id) map.set(s.id, s); });
     myCodeSongs.forEach((s) => { if (s?.id) map.set(s.id, s); });
-    if (generatedSong?.id) map.set(generatedSong.id, generatedSong);
+    if (generatedSong?.id && isSameCode(generatedSong)) map.set(generatedSong.id, generatedSong);
     return Array.from(map.values()).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
   })();
 

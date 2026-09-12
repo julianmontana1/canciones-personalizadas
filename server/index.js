@@ -1134,6 +1134,7 @@ app.post('/api/generate', generateLimiter, async (req, res) => {
       remaining: remainingSongs,
       song: {
         id: songId,
+        code: userCode.code,
         names: songNames,
         references: songRefs,
         style: songStyle,
